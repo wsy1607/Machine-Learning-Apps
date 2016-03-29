@@ -1,17 +1,18 @@
-# match scores
+# Match Scores
 
 Program Name: Match Scores
 
 Author: Sheng
 
-This program will generate linkedin functions for all contacts loaded and match scores for all job posts. Then updates the scores frequently
+This program will generate linkedin functions for all contacts loaded and match scores for all job posts. It provides a solution for job application referral
 
-csv files can be found at: https://drive.google.com/drive/u/0/folders/0B5wkYHJz9Ns8UGtiRGFSLXVtMm8
-github repository: https://github.com/wsy1607/Marketing-App
+All files can be found at: https://drive.google.com/drive/u/0/folders/0B5wkYHJz9Ns8UGtiRGFSLXVtMm8
+
+Github repository: https://github.com/wsy1607/Marketing-App
 
 
 ## Overview of process
-First set up all raw data including a list of fortune 500 companies, a list of top 25 schools and two lists of locations. Then generate linkedin functions for every contact. Then based on each job post, generate matches for each contact to find the best potential candidates. We can keep updating the scores using machine learning algorithms (not finished yet).
+First set up all raw data including a list of fortune 500 companies, a list of top 25 schools and two lists of locations. Then generate linkedin functions for every new contact. Then based on each job post, generate match score for each contact which helps to find the best potential candidates.
 
 
 ## Tools and Database Models
@@ -31,11 +32,11 @@ Use the python scripts to read and write data into MongoDB, which stores all fro
 
 ### Step 2: generate linkedin functions for all contacts
 
-* generatelinkedinfunction.py insert all new contacts from remote server into local server as "profiles" with calculating all linkedin functions.
+* generatelinkedinfunction.py inserts all new contacts from remote server into local server as "profiles" with calculating all linkedin functions.
 
 ### Step 3: generate match scores between jobs and contacts (users' linkedin connections)
 
-* generatematchscore.py recommend potential candidates (contacts) for each job post based on match scores.
+* generatematchscore.py recommends potential candidates (contacts) for each job post based on match scores.
 
 
 ## Database Reference
@@ -46,7 +47,7 @@ Use the python scripts to read and write data into MongoDB, which stores all fro
 
 * Collections created: "fortune500","topSchool","broadLocation","functionalLocation"
 
-### Column References
+### Important Column References
 
 * "fortune500" list: a list of company names
 * "topSchool" list: a list of school names

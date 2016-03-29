@@ -1,4 +1,5 @@
-#this script generates shipped beer box for one specific beer club member
+#this script generates a shipped beer box for one specific beer club member
+#we need to input the shipped box id
 #recommended beers are based on region, taste, strength, type of the user
 #and price, remaining, popularity of beers and feedback from propose boxes
 #The input collections: "beers","rawSalesData","inventory","locationReference","beerBox","proposeBox" and "shippedBox"
@@ -733,6 +734,9 @@ if __name__ == '__main__':
     # client1 = MongoClient('localhost', 27017)
     # db1 = client1.appDB
 
+    #define a shipped box id (for debug only)
+    #shippedBoxId = "n97ryKBhSBCrHAaZr"
+    
     #get all inventory info
     print "loading sales info and beer box user info"
     inventoryInfo = getinventory()

@@ -531,23 +531,23 @@ if __name__ == '__main__':
     # db1 = client1.appDB
 
     #This chunk of code is used to define inputs for testing or debugging
-    #See the instructions at line
+    #See the instructions at line 5
+
+    #the propose box id
+    #proposeBoxId = 'tNEfnuaKfMM8mA6XF'
+    #a list of beers (inventory ids) to be kept for example:
+    #toKeepInventoryIds = [] or ['1538wrdga4278wbgpkpa16ozbtl','213rrvdga559vbppkg2a12ozbtl']
+    #a list of beers (inventory ids) to be added for example:
+    #toAddInventoryIds = [] or ['163clwhba518wxyybbga22ozbtl','234nrhcsa417kcv2013a500mLbtl']
+    #a list of beers (inventory ids) to be removed for example:
+    #toRemoveInventoryIds = [] or ['1538wrdga4278wbgpkpa16ozbtl','213rrvdga559vbppkg2a12ozbtl']
+    #editing options, a dictionary in the following format:
+    #boxOptions = {'price':0,'weight':0,'rareness':0}
+
+    #so far we have 6 beers in one beer box
     nBeers = 6
-    proposeBoxId = 'tNEfnuaKfMM8mA6XF'
-    toKeepInventoryIds = []
-    #toKeepInventoryIds = ['1538wrdga4278wbgpkpa16ozbtl']
-    #toKeepInventoryIds = ['1538wrdga4278wbgpkpa16ozbtl','213rrvdga559vbppkg2a12ozbtl','264gfcfya265gf60mupa12ozbtl','091rdbcha223bvg2011a750mLbtl','173bkmdya417bkzbkmma500mLbtl','163clwhba518wxyybbga22ozbtl']
-    #toAddInventoryIds = ['1538wrdga4278wbgpkpa16ozbtl','213rrvdga559vbppkg2a12ozbtl','264gfcfya265gf60mupa12ozbtl']
-    #toAddInventoryIds = ['234nrhcsa417kcv2013a500mLbtl']
-    toAddInventoryIds = []
-    #toRemoveInventoryIds = ['163clwhba518wxyybbga22ozbtl']
-    #toRemoveInventoryIds = ['1538wrdga4278wbgpkpa16ozbtl','213rrvdga559vbppkg2a12ozbtl','264gfcfya265gf60mupa12ozbtl','091rdbcha223bvg2011a750mLbtl','173bkmdya417bkzbkmma500mLbtl','163clwhba518wxyybbga22ozbtl']
-    toRemoveInventoryIds = []
-    #toRemoveInventoryIds = ['1538wrdga4278wbgpkpa16ozbtl','213rrvdga559vbppkg2a12ozbtl']
-    boxOptions = {'price':1,'weight':0,'rareness':0}
     #check all inputs
     checkallinputs(proposeBoxId,toKeepInventoryIds,toAddInventoryIds,toRemoveInventoryIds,boxOptions,nBeers)
-
     #get all inventory info
     print "getting inventory info with sales data"
     inventoryInfo = getinventory()

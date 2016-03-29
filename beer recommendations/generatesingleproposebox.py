@@ -1,4 +1,5 @@
-#this script generates proposed beer box for one specific beer club member
+#this script generates a proposed beer box for one specific beer club member
+#we need to input the propose box id
 #recommended beers are based on region, taste, strength, type of the user
 #and price, remaining, popularity of beers
 #The input collections: "beers","rawSalesData","inventory","locationReference","beerBox" and "proposeBox"
@@ -281,6 +282,9 @@ if __name__ == '__main__':
     # client1 = MongoClient('localhost', 27017)
     # db1 = client1.appDB
 
+    #define a propose box id (for debug only)
+    #proposeBoxId = "tNEfnuaKfMM8mA6XF"
+    
     #get all inventory and location info
     print "getting inventory, location and sales info"
     inventoryInfo = getinventory()

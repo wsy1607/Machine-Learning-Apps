@@ -41,21 +41,35 @@ def checkemails(centralEmailList,sentEmailList):
     soldResponse = sentEmailList[sentEmailList["response"] == "sold"].shape[0]
     print "For all " + str(sentUser) + " sent emails: "+ str(noResponse) + " no responses, " + str(openResponse) + " opened, " + str(clickResponse) + " clicked " + str(soldResponse) + " sold"
 
+#load the central email list
+def loadcentralemails():
+    centralEmailList = session.execute("""
+    select * from "centralEmailList"
+    """)
 
-#connect to cassandra
-print "connecting to cassandra for local mode"
-cluster = Cluster()
-session = cluster.connect('marketingApp')
-session.row_factory = dict_factory
+    centralEmailList = pd.DataFrame(list(centralEmailList))
+    return(centralEmailList)
 
-centralEmailList = session.execute("""
-select * from "centralEmailList"
-""")
+#load the sent email list
+def loadsentemails():
+    sentEmailList = session.execute("""
+    select * from "sentEmailList"
+    """)
 
-sentEmailList = session.execute("""
-select * from "sentEmailList"
-""")
+    sentEmailList = pd.DataFrame(list(sentEmailList))
+    return(sentEmailList)
 
-centralEmailList = pd.DataFrame(list(centralEmailList))
-sentEmailList = pd.DataFrame(list(sentEmailList))
-checkemails(centralEmailList,sentEmailList)
+#main function
+if __name__ == '__main__':
+    #connect to cassandra
+    print "connecting to cassandra for local mode"
+    cluster = Cluster()
+    session = cluster.connect('marketingApp')
+    session.row_factory = dict_factory
+
+    #load the central email list
+    centralEmailList = loadcentralemails()
+    #load the sent email list
+    sentEmailList = loadsentemails()
+    #report those KPIs
+    checkemails(centralEmailList,sentEmailList)

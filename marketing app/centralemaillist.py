@@ -13,9 +13,6 @@
 #names may differ from the raw sales data and only use email as a reference
 #2: the 'totalSales', 'quantityCount' and 'orderCount' columns exclude sales from subscription and gift cards
 
-#to do:
-#1: add user preferences info
-
 
 #load packages
 from cassandra.cluster import Cluster
@@ -56,8 +53,6 @@ def cleansalesdata(sales, row, value):
     salesData = pd.pivot_table(salesData,index = [row],values = [value],aggfunc = np.sum,fill_value = 0)
     #reset the row index and turn email from index to a new column
     salesData.reset_index(level=0,inplace=True)
-    #print salesData.shape
-    #print salesData
     return(salesData)
 
 #define the function to get the last order date per email
@@ -71,10 +66,7 @@ def getlastorderdate(sales,row):
     for date in salesData['day']:
         newDate = datetime.datetime.strptime(date,"%m/%d/%y")
         newDateList.append(newDate)
-    #print newDateList
-    #print salesData.head(10)
     salesData['date'] = newDateList
-    #salesData.loc[:,'date'] = pd.Series(newDateList,index = salesData.index)
     #get the last order date
     salesData = pd.pivot_table(salesData,index = [row],values = ['date'],aggfunc = max)
     #convert date to string
@@ -82,7 +74,6 @@ def getlastorderdate(sales,row):
     for date in salesData['date']:
         newDate = date.strftime("%m/%d/%y")
         lastOrderDateList.append(newDate)
-    #print lastOrderDateList
     salesData["lastOrderDate"] = lastOrderDateList
     #reset the row index and turn email from index to a new column
     salesData.reset_index(level=0,inplace=True)
@@ -192,147 +183,158 @@ def getbeers(proposeEmailList,salesData,beersData,k,p):
                 i = 0
                 moreBeerIds = []
                 while len(set(beers["beerId"].tolist() + moreBeerIds)) < k:
-                    #moreBeer = db1.beers.find_one({"overview.name":topBeers[i]})
                     moreBeer = beersData.loc[beersData.productTitle == topBeers[i],"beerId"]
                     i += 1
                     if moreBeer.empty == False:
                         moreBeerIds.append(moreBeer.values[0])
                 recommendedBeers = list(set(beers["beerId"].tolist() + moreBeerIds))[0:k]
                 beersType = "popular"
-        #print beers
         recommendedBeersList.append(recommendedBeers)
         beersTypeList.append(beersType)
     return({"recommendedBeers":recommendedBeersList,"beersType":beersTypeList})
 
-#connect to cassandra
-print "connecting to cassandra for local mode"
-cluster = Cluster()
-session = cluster.connect('marketingApp')
-session.row_factory = dict_factory
-
-#load the initial email list locally
-print "loading and cleaning the initial email list"
-data = []
-with open('initial_email_list.csv', 'rb') as csvfile:
-    reader = csv.reader(csvfile)
-    for row in reader:
-        data.append(row)
-
-#load into a dataframe
-initialEmailList = pd.DataFrame(data[1:])
-#assign column names
-initialEmailList.columns = data[0]
-#clean data
-initialEmailList = cleanemaillist(initialEmailList)
-
-#load raw sales data from cassandra
-print "retrieving raw sales data from cassandra"
-#rawSales = session.execute("select * from rawSalesData limit 200")
-rawSales = session.execute("""
-select * from "rawSalesData"
-""")
-#convert paged results to a list then a dataframe
-sales = pd.DataFrame(list(rawSales))
-
-#load similar beers from cassandra
-print "retrieving similar beers from cassandra"
-beersData = session.execute("""
-select * from "beersData"
-""")
-#convert paged results to a list then a dataframe
-# print similarBeers
-# aaa
-beersData = pd.DataFrame(list(beersData))
-
-#clean data and create the full email list
-print "cleaning sales data, and merging to the main email list, please wait about 5 minutes"
-#get total sales per email
-salesPerEmail = cleansalesdata(sales, row = "email", value = "totalSales")
-#get total quantity count per email
-quantitiesPerEmail = cleansalesdata(sales, row = "email", value = "quantityCount")
-#get total order count per email
-ordersPerEmail = cleansalesdata(sales, row = "email", value = "orderCount")
-#get the last order date per email
-lastOrderDataPerEmail = getlastorderdate(sales,row = "email")
-
-#merge features to the initial email list
-mainEmailList = addfeatures(addfeatures(addfeatures(addfeatures(initialEmailList,salesPerEmail),quantitiesPerEmail),ordersPerEmail),lastOrderDataPerEmail,method="inner")
-#clean missing values
-mainEmailList = convertNaN(mainEmailList)
-#get all order ids per email
-mainEmailList = getorderids(mainEmailList,sales)
-#sort by sales
-mainEmailList = sortbycolumn(mainEmailList,column = "totalSales")
-
-#get current date and time
-updateTime = gettesttime()
-updateDate = gettestdate(updateTime)
-#generate recommended beers
-recommendedBeers = getbeers(mainEmailList,sales,beersData,k=10,p=0.5)
-beersType = recommendedBeers.get("beersType")
-recommendedBeers = recommendedBeers.get("recommendedBeers")
-# print beersType[1:10]
-# print len(beersType)
-# print recommendedBeers[1:10]
-# print len(recommendedBeers)
-
-#create the table for the main email list containing all users
-session.execute("""
-CREATE TABLE IF NOT EXISTS "centralEmailList" (
-    "userId" int,
-    email varchar,
-    name varchar,
-    "shippingCountry" varchar,
-    "shippingProvince" varchar,
-    "shippingCity" varchar,
-    type varchar,
-    "totalSales" float,
-    "quantityCount" int,
-    "orderCount" int,
-    "lastOrderDate" varchar,
-    orders set<int>,
-    preferences set<varchar>,
-    gender varchar,
-    age int,
-    rank int,
-    status varchar,
-    "recommendedBeers" list<varchar>,
-    "beersType" varchar,
-    "updateTime" timestamp,
-    "updateDate" varchar,
-    PRIMARY KEY (email)
-)
-""")
-
-#insert raw data to cassandra table "rawSalesData"
-print "inserting emails to cassandra, please wait about 5 minutes"
-n = mainEmailList.shape[0]
-for i in range(n):
-    values = mainEmailList.iloc[i].values.tolist()+[None,None,None,i+1,'pending',recommendedBeers[i],beersType[i],updateTime,updateDate]
-    #print values
-    prepared_stmt = session.prepare("""
-    INSERT INTO "centralEmailList" ("userId",email,name,"shippingCountry","shippingProvince","shippingCity",type,"totalSales","quantityCount","orderCount","lastOrderDate",orders,preferences,gender,age,rank,status,"recommendedBeers","beersType","updateTime","updateDate")
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+#load raw emails
+def loademails():
+    print "retrieving raw emails from cassandra"
+    initialEmailList = session.execute("""
+    select * from "rawEmailList"
     """)
-    bound_stmt = prepared_stmt.bind(values)
-    stmt = session.execute(bound_stmt)
-    print str(i+1) + " emails have been successfully inserted"
+    #convert paged results to a list then a dataframe
+    initialEmailList = pd.DataFrame(list(initialEmailList))
+    #clean data
+    initialEmailList = cleanemaillist(initialEmailList)
+    return(initialEmailList)
 
-#create indices for status and rank
-session.execute("""
-create index if not exists "centralEmailList_status" on "centralEmailList"(status)
-""")
-session.execute("""
-create index if not exists "centralEmailList_type" on "centralEmailList"(type)
-""")
-session.execute("""
-create index if not exists "centralEmailList_rank" on "centralEmailList"(rank)
-""")
+#load raw sales
+def loadsales():
+    print "retrieving raw sales data from cassandra"
+    rawSales = session.execute("""
+    select * from "rawSalesData"
+    """)
+    #convert paged results to a list then a dataframe
+    sales = pd.DataFrame(list(rawSales))
+    return(sales)
 
-#print all info about null values
-print "\n the missing value counts are shown as below:"
-print mainEmailList.isnull().sum()
-# print salesPerEmail.shape
-# print quantitiesPerEmail.shape
-# print ordersPerEmail.shape
-# print lastOrderDataPerEmail.shape
+#load beers data
+def loadbeers():
+    #load similar beers from cassandra
+    print "retrieving similar beers from cassandra"
+    beersData = session.execute("""
+    select * from "beersData"
+    """)
+    #convert paged results to a list then a dataframe
+    beersData = pd.DataFrame(list(beersData))
+    return(beersData)
+
+#insert to cassandra
+def insertdb(mainEmailList,recommendedBeers,beersType,updateTime,updateDate):
+    #create the table for the main email list containing all users
+    session.execute("""
+    CREATE TABLE IF NOT EXISTS "centralEmailList" (
+        "userId" int,
+        email varchar,
+        name varchar,
+        "shippingCountry" varchar,
+        "shippingProvince" varchar,
+        "shippingCity" varchar,
+        type varchar,
+        "totalSales" float,
+        "quantityCount" int,
+        "orderCount" int,
+        "lastOrderDate" varchar,
+        orders set<int>,
+        preferences set<varchar>,
+        gender varchar,
+        age int,
+        rank int,
+        status varchar,
+        "recommendedBeers" list<varchar>,
+        "beersType" varchar,
+        "updateTime" timestamp,
+        "updateDate" varchar,
+        PRIMARY KEY (email)
+    )
+    """)
+
+    #insert raw data to cassandra table "rawSalesData"
+    print "inserting emails to cassandra, please wait about 5 minutes"
+    n = mainEmailList.shape[0]
+    for i in range(n):
+        values = mainEmailList.iloc[i].values.tolist()+[None,None,None,i+1,'pending',recommendedBeers[i],beersType[i],updateTime,updateDate]
+        prepared_stmt = session.prepare("""
+        INSERT INTO "centralEmailList" (email,name,"shippingCity","shippingCountry","shippingProvince",type,"userId","totalSales","quantityCount","orderCount","lastOrderDate",orders,preferences,gender,age,rank,status,"recommendedBeers","beersType","updateTime","updateDate")
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """)
+        bound_stmt = prepared_stmt.bind(values)
+        stmt = session.execute(bound_stmt)
+        print str(i+1) + " emails have been successfully inserted"
+    #create indices for status and rank
+    session.execute("""
+    create index if not exists "centralEmailList_status" on "centralEmailList"(status)
+    """)
+    session.execute("""
+    create index if not exists "centralEmailList_type" on "centralEmailList"(type)
+    """)
+    session.execute("""
+    create index if not exists "centralEmailList_rank" on "centralEmailList"(rank)
+    """)
+
+    #print all info about missing values
+    print "\n the missing value counts are shown as below:"
+    print mainEmailList.isnull().sum()
+
+#main function
+if __name__ == '__main__':
+    #connect to cassandra
+    print "connecting to cassandra for local mode"
+    cluster = Cluster()
+    session = cluster.connect('marketingApp')
+    session.row_factory = dict_factory
+
+    # #load the initial email list locally
+    # print "loading and cleaning the initial email list"
+    # data = []
+    # with open('initial_email_list.csv', 'rb') as csvfile:
+    #     reader = csv.reader(csvfile)
+    #     for row in reader:
+    #         data.append(row)
+    #
+    # #load into a dataframe
+    # initialEmailList = pd.DataFrame(data[1:])
+    # #assign column names
+    # initialEmailList.columns = data[0]
+
+
+    #load raw emails from cassandra
+    initialEmailList = loademails()
+    #load raw sales data from cassandra
+    sales = loadsales()
+    #load similar beers from cassandra
+    beersData = loadbeers()
+    #clean data and create the full email list
+    print "cleaning sales data, and merging to the main email list, please wait about 5 minutes"
+    #get total sales per email
+    salesPerEmail = cleansalesdata(sales, row = "email", value = "totalSales")
+    #get total quantity count per email
+    quantitiesPerEmail = cleansalesdata(sales, row = "email", value = "quantityCount")
+    #get total order count per email
+    ordersPerEmail = cleansalesdata(sales, row = "email", value = "orderCount")
+    #get the last order date per email
+    lastOrderDataPerEmail = getlastorderdate(sales,row = "email")
+    #merge features to the initial email list
+    mainEmailList = addfeatures(addfeatures(addfeatures(addfeatures(initialEmailList,salesPerEmail),quantitiesPerEmail),ordersPerEmail),lastOrderDataPerEmail,method="inner")
+    #clean missing values
+    mainEmailList = convertNaN(mainEmailList)
+    #get all order ids per email
+    mainEmailList = getorderids(mainEmailList,sales)
+    #sort by sales
+    mainEmailList = sortbycolumn(mainEmailList,column = "totalSales")
+    #get current date and time
+    updateTime = gettesttime()
+    updateDate = gettestdate(updateTime)
+    #generate recommended beers
+    recommendedBeers = getbeers(mainEmailList,sales,beersData,k=10,p=0.5)
+    beersType = recommendedBeers.get("beersType")
+    recommendedBeers = recommendedBeers.get("recommendedBeers")
+    #insert to cassandra
+    insertdb(mainEmailList,recommendedBeers,beersType,updateTime,updateDate)

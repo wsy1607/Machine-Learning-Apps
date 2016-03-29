@@ -1,17 +1,18 @@
-# beer recommendations
+# Beer Recommendations
 
 Program Name: Beer Recommendations
 
 Author: Sheng
- 
+
 This program will generate similar beers and recommended beer boxes as a part of our e-commerce product.
 
-csv files can be found at: https://drive.google.com/drive/u/0/folders/0B5wkYHJz9Ns8UGtiRGFSLXVtMm8
-github repository: https://github.com/wsy1607/Marketing-App
+All files can be found at: https://drive.google.com/drive/u/0/folders/0B5wkYHJz9Ns8UGtiRGFSLXVtMm8
+
+Github repository: https://github.com/wsy1607/Marketing-App
 
 
 ## Overview of process
-First set up all raw data. Then generate similar beers and recommended beer boxes using sales and user profile data. Update ratings by web traffic logs (haven't finished). Please note that there are some simulated parameters which haven't been well-defined (can be found with python function random()) so far. Also, several tuning parameters labeled as n, m and k should be redefined if necessary.
+First set up all raw data. Then generate similar beers and recommended beer boxes using sales and user profiles data. Update ratings by web traffic logs (haven't finished). Please note that there are some randomly simulated parameters which haven't been well-defined (can be found with python function random()) so far. Also, several tuning parameters, for example, labeled as n, m and k should be re-defined if necessary.
 
 
 ## Tools and Database Models
@@ -45,7 +46,7 @@ Use the python scripts to read and write data into MongoDB, which stores all fro
 * editsingleshippedbox.py edits one shipped box given certain requirements.
 
 
-### Step 4 (not finished): Update beers ratings which are associated with ranks displayed in the general search pages.
+### Step 4 (not finished yet): Update beers ratings which are associated with ranks displayed in the general search pages.
 
 * ratings.py updates all beers ratings by front-end web traffic logs.
 
@@ -55,7 +56,7 @@ Use the python scripts to read and write data into MongoDB, which stores all fro
 
 * Collections created: "rawSalesData","locationReference"
 
-### Column References
+### Important Column References
 
 * "productTitle" string: the title of the product
 * "vendor" string: the vendor of the product

@@ -1,53 +1,48 @@
 # Marketing App
 
-This is an email marketing process of email campaigns for all 7000+ potential customers. This program will control the process from back-end using python and could be interacted with the front-end interface as well.
+Program Name: Marketing App
 
-files can be found at: https://drive.google.com/open?id=0B5wkYHJz9Ns8azJBQjZQWHNoMDA
+Author: Sheng
 
-github repository: https://github.com/wsy1607/Marketing-App
+This is an email marketing process of email campaigns. This program will control the process from back-end data flow using python and could be interacted with the front-end interface as well.
 
+All files can be found at: https://drive.google.com/open?id=0B5wkYHJz9Ns8azJBQjZQWHNoMDA
 
-## To Do
-
-1: get the real version info when creating the version info table
-
-2: fix missing data for user preferences and beer parameters
+Github repository: https://github.com/wsy1607/Marketing-App
 
 
 ## Overview of process
-First set up all raw data. Then generate emails for every single marketing campaign using multiple versions for testing. Update version ratios for next campaign using multi-armed bandit test, and update ranks of all customers based on the predicted likelihood of getting positively feedback by machine learning algorithms.
+First set up all raw data. Then generate emails for every single marketing campaign using multiple versions for testing. Update version ratios for next campaign using the multi-armed bandit test, and update ranks of all customers based on the predicted likelihood of getting positively feedback by machine learning algorithms.
 
 
 ## Tools and Database Models
-Use the python scripts to read and write data into Cassandra, which stores all backend data. The following 4 steps include all methods. All methods from step 2 to step 4 are found in the emailCampain project under tasks.py (under celery tasks). Methods in step 1 should be executed only once when setting up all the data infrastructure (they won't show up in the celery tasks folder).
+Use the python scripts to read and write data into Cassandra (MongoDB is only required in Step 1 to migrate data into Cassandra). The following 4 steps include all methods. All methods from step 2 to step 4 are found in the emailCampain project under tasks.py (under celery tasks). Methods in step 1 should be executed only once when setting up all the data infrastructure (they won't show up in the celery tasks folder).
 
 
 ### Step 1: Setting up all Raw Data and the central email list
-Use keyspace "marketingApp" in Cassandra, and run all python scripts listed below once. See all data schema in the database reference section.
 
 * Cassandra Setup: go to the Cassandra main repository, enter "bin/apache-cassandra -f" to run the Cassandra database
 
 * cassandrasetup.py: creates the main keyspace "marketingApp"
 
-* rawsalesdata.py creates the table "rawSalesData" using raw_sales_data.csv which shows some historical transactions by those potential customers.
+* rawsalesdata.py creates the table "rawSalesData" which shows some historical transactions by those email recipients.
 
-* rawemaillist.py creates the table "rawEmailList" using initial_email_list.csv which is a list of all unique customers with their emails and other personal data from shopify sales data.
+* rawemaillist.py creates the table "rawEmailList" which is a list of all unique customers with their emails and other personal data.
 
-* rawversioninfo.py creates the table "rawVersionInfo" and "versionTests". "rawVersionInfo" keeps all raw version information, and "versionTests" keeps AB split-tests results.
+* rawversioninfo.py creates the table "rawVersionInfo" and "versionTests". "rawVersionInfo" keeps all raw version information, and "versionTests" keeps multiple split-tests results.
 
-* mongodbsetup.py creates a list beers with sales, similar beers and ranks, which will be displayed as recommendations.
+* MongoDB Setup: go to the Bluemoon repository, run the Meteor app.
 
-* centralemaillist.py creates the table "centralEmailList" using the table "rawSalesData" and "rawEmailList". It is the full list of all customers with emails and other personal data. Each email in the "centralEmailList" has a status and a rank. We will select emails from the "centralEmailList" based on the status and the rank for every single campaign. The status and rank will be updated after completing each email campaign.
+* mongodbsetup.py creates the table "beersData", which is a list beers with sales, similar beers and ranks, which will be displayed as recommendations later.
+
+* centralemaillist.py creates the table "centralEmailList" using the table "rawSalesData" and "beersData". It is the full list of all customers with emails and other personal data. Each email in the "centralEmailList" has a status and a rank. We will select emails from the "centralEmailList" based on the status and the rank for every single campaign. The status and rank will be updated after completing each email campaign.
 
 
 ### Step 2: Sending a single campaign (the first campaign)
-After setting up all raw data, we are able to run all python scripts listed below once to send an email campaign.
 
 * createproposeemails.py creates the table "proposeEmailList" using the table "centralEmailList", which has the next campaign candidates. We get these propose emails from the central email list with 'preferred' status or having 'pending' status with highest ranks.
 
 * The administrator can manually check for all those propose emails. When generating the propose email candidates, the default 'check' status is "yes". If the administrator doesn't want to consider this email forever, turn it to "no". If the administrator doesn't want to consider this email for the next campaign, turn it to "pending".
-
-* addproposeemails.py updates the table "proposeEmailList" by adding more propose emails when we don't have enough propose emails available.
 
 * createfinalemails.py creates the table "finalEmailList" using the table "proposeEmailList" with 'yes' check status, and all emails on the "finalEmailList" will be send out for the next campaign. In the main time, we assign each email a version randomly based on the most recent multi-armed-split-test ratio calculated from the table "versionTests".
 
@@ -67,7 +62,7 @@ After collecting some feedbacks from those sent emails, such as 'open', 'reply' 
 
 ### Step 4: Repeat the step 2 and step 3 until we complete the process
 
-* tracking.py reports all KPIs of our marketing applications to track the whole process including general emails information and sent emails information.
+* tracking.py (optional) reports all KPIs of our marketing applications to track the whole process including general emails information and sent emails information.
 
 ## Database Reference
 
@@ -80,9 +75,6 @@ After collecting some feedbacks from those sent emails, such as 'open', 'reply' 
 * Campaign Data: "beersData","centralEmailList","proposeEmailList","finalEmailList"
 
 * Analytic Data: "sentEmailList","versionTests"
-
-
-## Table Reference
 
 
 ### Table Indices
@@ -105,7 +97,7 @@ After collecting some feedbacks from those sent emails, such as 'open', 'reply' 
 
 * "versionTests": no indices
 
-### Column References
+### Important Column References
 
 * "orderId" int: the unique order or transaction id obtained from shopify sales data
 * "productType" varchar: the type of the product, such as beer, gift or subscription

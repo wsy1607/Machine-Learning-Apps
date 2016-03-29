@@ -2,7 +2,9 @@
 #this script should be executed periodically after collecting responses from sent emails
 
 #note that we are using multi-armed bandit test, which is a extended version of A/B test
-#to calculate the updated version test ratios
+#to calculate the updated version test ratios.
+
+#See the reference at https://support.google.com/analytics/answer/2844870?hl=en
 
 #the basic process is shown as below:
 #first get the most recent conversion rates for all split versions
@@ -14,6 +16,7 @@
 #important: since the real baysian probabilities are too complex, we apply Monte Carlo
 #simulation to make approximations. We use the beta distribution generator, Beta(k,n+1-k),
 #where k = # of clicks (target metrics), n = # of total visits (total populations)
+#we should re-define those variables if necessary
 
 #after calculating the next test version ratios, we update the table 'versionTests'.
 #from the printouts, we can get the info whether to continue the test or terminate it
@@ -32,7 +35,7 @@ def checkinputs(versionInfo,sentEmailList,minValidResponse):
     if len(versionInfo) < 1:
         raise ValueError("version info hasn't been correctly set up")
     else:
-        print "we will update " + str(versionInfo) + " version test ratios"
+        print "we will update " + str(len(versionInfo)) + " version ratios"
     visits = sentEmailList.shape[0]
     clicks = sentEmailList.loc[sentEmailList.response != 'no'].shape[0]
     if clicks < minValidResponse:
@@ -45,14 +48,14 @@ def getversiontestresults(sentEmailList,versionInfo):
     versionTestResultsList = []
     #get unique version ids
     versionIds = set(sentEmailList["versionId"])
-    print versionIds
+    #print versionIds
     for versionId in versionIds:
         versionTestResultsDict = {}
         versionVisits = sentEmailList.loc[sentEmailList.versionId == versionId]
         versionClicks = versionVisits.loc[versionVisits.response != 'no']
         versionTestResultsDict["versionId"] = versionId
-        print versionId
-        print versionInfo
+        #print versionId
+        #print versionInfo
         versionTestResultsDict["timeFeature"] = list(versionInfo.loc[versionInfo.versionId == versionId,"timeFeature"])[0]
         versionTestResultsDict["titleFeature"] = list(versionInfo.loc[versionInfo.versionId == versionId,"titleFeature"])[0]
         versionTestResultsDict["visits"] = versionVisits.shape[0]
@@ -162,68 +165,86 @@ def gettestdate(testTime):
     testDate = str(testTime.month) + '/' + str(testTime.day) + '/' + str(testTime.year)
     return(testDate)
 
-#set variables
-minValidResponse = 10
-percentile = 0.95
-stopRatio = 0.01
-n = 100000
-
-#connect to cassandra
-print "connecting to cassandra for local mode"
-cluster = Cluster()
-session = cluster.connect('marketingApp')
-session.row_factory = dict_factory
-
-#load the sent email list from cassandra
-print "retrieving the sent email list from cassandra"
-rawEmailList = session.execute("""
-select * from "sentEmailList"
-""")
-
-#convert paged results to a list then a dataframe
-sentEmailList = pd.DataFrame(list(rawEmailList))
-
-#load the version info from cassandra
-print "retrieving the version info data from cassandra"
-rawVersionList = session.execute("""
-select * from "rawVersionInfo"
-""")
-
-#convert paged results to a list then a DataFrame
-versionInfo = pd.DataFrame(list(rawVersionList))
-#check all inputs are right
-checkinputs(versionInfo,sentEmailList,minValidResponse)
-
-#get version test results
-versionTestResults = getversiontestresults(sentEmailList,versionInfo)
-#print versionTestResults
-
-#get ratios for the next split test
-print "getting new version test ratios, where number of iterations = " + str(n) + ", percentile = " + str(percentile) + ", stopRatio = " + str(stopRatio)
-print "please wait about 1 minute"
-MCResults = getnextsplit(versionTestResults,percentile,stopRatio,n)
-nextSplitRatio = MCResults.get("nextSplitRatio")
-remainingValue = MCResults.get("remainingValue")
-print nextSplitRatio
-print remainingValue
-
-#get current date and time
-testTime = gettesttime()
-testDate = gettestdate(testTime)
-
-#update the version test list
-print "updating the version test list into cassandra, please wait about 1 second"
-for versionTestData in versionTestResults:
-    versionId = versionTestData.get("versionId")
-    visits = versionTestData.get("visits")
-    clicks = versionTestData.get('clicks')
-    rate = versionTestData.get('rate')
-    testRatio = nextSplitRatio.get(versionId)
-    timeFeature = versionTestData.get('timeFeature')
-    titleFeature = versionTestData.get('titleFeature')
-    prepared_stmt = session.prepare("""
-    INSERT INTO "versionTests" ("versionId","testDate",clicks,rate,"testRatio","testTime","timeFeature","titleFeature",visits)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+#load the sent email list
+def loadsentemails():
+    #load the sent email list from cassandra
+    print "retrieving the sent email list from cassandra"
+    rawEmailList = session.execute("""
+    select * from "sentEmailList"
     """)
-    bound_stmt = prepared_stmt.bind([versionId,testDate,clicks,rate,testRatio,testTime,timeFeature,titleFeature,visits])
-    stmt = session.execute(bound_stmt)
+
+    #convert paged results to a list then a dataframe
+    sentEmailList = pd.DataFrame(list(rawEmailList))
+    return(sentEmailList)
+
+#load the version info
+def loadversioninfo():
+    #load the version info from cassandra
+    print "retrieving the version info data from cassandra"
+    rawVersionList = session.execute("""
+    select * from "rawVersionInfo"
+    """)
+
+    #convert paged results to a list then a DataFrame
+    versionInfo = pd.DataFrame(list(rawVersionList))
+    return(versionInfo)
+
+#update the version info
+def updateversioninfo(versionTestResults):
+    #get current date and time
+    testTime = gettesttime()
+    testDate = gettestdate(testTime)
+
+    #update the version test list
+    print "updating the version test list into cassandra, please wait about 1 second"
+    for versionTestData in versionTestResults:
+        versionId = versionTestData.get("versionId")
+        visits = versionTestData.get("visits")
+        clicks = versionTestData.get('clicks')
+        rate = versionTestData.get('rate')
+        testRatio = nextSplitRatio.get(versionId)
+        timeFeature = versionTestData.get('timeFeature')
+        titleFeature = versionTestData.get('titleFeature')
+        prepared_stmt = session.prepare("""
+        INSERT INTO "versionTests" ("versionId","testDate",clicks,rate,"testRatio","testTime","timeFeature","titleFeature",visits)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """)
+        bound_stmt = prepared_stmt.bind([versionId,testDate,clicks,rate,testRatio,testTime,timeFeature,titleFeature,visits])
+        stmt = session.execute(bound_stmt)
+    print "done"
+
+#main function
+if __name__ == '__main__':
+    #connect to cassandra
+    print "connecting to cassandra for local mode"
+    cluster = Cluster()
+    session = cluster.connect('marketingApp')
+    session.row_factory = dict_factory
+
+    #set variables
+    #minimal number of response required for this process
+    minValidResponse = 10
+    #set up variables for stopping
+    percentile = 0.95
+    stopRatio = 0.01
+    #number of iterations
+    n = 100000
+
+    #load the sent email list
+    sentEmailList = loadsentemails()
+    #load the version info
+    versionInfo = loadversioninfo()
+    #check all inputs are right
+    checkinputs(versionInfo,sentEmailList,minValidResponse)
+    #get version test results
+    versionTestResults = getversiontestresults(sentEmailList,versionInfo)
+    #get ratios for the next split test
+    print "getting new version test ratios, where number of iterations = " + str(n) + ", percentile = " + str(percentile) + ", stopRatio = " + str(stopRatio)
+    print "please wait about 1 minute"
+    MCResults = getnextsplit(versionTestResults,percentile,stopRatio,n)
+    nextSplitRatio = MCResults.get("nextSplitRatio")
+    remainingValue = MCResults.get("remainingValue")
+    print nextSplitRatio
+    print remainingValue
+    #update the version info
+    updateversioninfo(versionTestResults)

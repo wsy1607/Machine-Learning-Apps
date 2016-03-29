@@ -6,9 +6,6 @@
 #the best machine learning model and use it to predict the response rating,
 #and updated the rank based one the rating, (high to low)
 
-#todo:
-#1: include more freatures
-
 
 #load packages
 from cassandra.cluster import Cluster
@@ -395,97 +392,103 @@ def updaterank(centralEmailList,dataOutput,YColumn):
     #print updatedEmailList.head(5)
     return(updatedEmailList)
 
-#connect to cassandra
-print "connecting to cassandra for local mode"
-cluster = Cluster()
-session = cluster.connect('marketingApp')
-session.row_factory = dict_factory
-
-#define the email rating paramters
-ratingParameters = {"no":0,"open":1,"click":2,"sold":3}
-minValidResponse = 10
-
-#load the sent email list (the most recent) from cassandra
-print "retrieving the most recent sent email list as training data from cassandra"
-rawEmailList = session.execute("""
-select * from "sentEmailList"
-""")
-
-#convert paged results to a list then a dataframe
-sentEmailList = pd.DataFrame(list(rawEmailList))
-#pre-check and summarize all responses
-checkresponse(sentEmailList,minValidResponse)
-
-#calculate the rank for each email (user)
-print "preparing the training data"
-sentEmailList = getresponserating(sentEmailList,ratingParameters)
-sentEmailList = getwaitingday(sentEmailList)
-
-#load the sent email list (the most recent) from cassandra
-print "retrieving all emails in the central email list as test data from cassandra"
-rawEmailList = session.execute("""
-select * from "centralEmailList"
-""")
-
-#convert paged results to a list then a dataframe
-centralEmailList = pd.DataFrame(list(rawEmailList))
-
-#calculate the rank for each email (user)
-print "preparing the test data from the central email list with " + str(centralEmailList.shape[0]) + " emails"
-centralEmailList = getwaitingday(centralEmailList)
-
-#get shuffled training data, selected a few columns which will be considered
-print "getting training data"
-#we will add more columns later
-#XColumns = ["gender","waitingDay","orderCount","preferences","quantityCount","age","shippingProvince","type"]
-XColumns = ["waitingDay","totalSales","orderCount","quantityCount","type","beersType"]
-YColumn = ["responseRating"]
-dummyColumns = ["type","beersType"]
-data = gettraining(sentEmailList,XColumns,dummyColumns,YColumn,dropNA = True,shuffle = True)
-
-#find the best random forest model by cross validation
-print "getting the best random forest model"
-[RFParameters,RFError] = RFCV(data,YColumn,k = 5,nTreeInitial = 50,maxDepth = 10,maxNumTrees = 200)
-#find the best lasso model by cross validation
-
-print "getting the best lasso model"
-[lassoParameter,lassoError] = lassoCV(data,YColumn,k = 5,maxAlpha = 10)
-
-#find the best rigde model by cross validation
-print "getting the best ridge model"
-[ridgeParameter,ridgeError] = ridgeCV(data,YColumn,k = 5,maxAlpha = 10)
-
-#fit the simple linear model by cross validation
-print "fitting the simple linear model"
-[linearParameter,linearError] = linearCV(data,YColumn,k = 5)
-
-#print the error for each model and get the best model with smallest CV error
-modelTypes = ["RF","lasso","ridge","linear"]
-modelParameters = [RFParameters,lassoParameter,ridgeParameter,linearParameter]
-modelErrors = [RFError,lassoError,ridgeError,linearError]
-bestModel = modelTypes[modelErrors.index(min(modelErrors))]
-bestParameter = modelParameters[modelErrors.index(min(modelErrors))]
-print "the smallest error for each model:"
-print "random forest:"+str(RFError)+", lasso:"+str(lassoError)+", ridge:"+str(ridgeError)+", linear:"+str(linearError)
-
-#fit the best model to all emails in the central email list
-print "working on final fit using the best selected model, which is " + bestModel
-#for unseen training data, we don't need to have the y variable
-allData = gettraining(centralEmailList,XColumns,dummyColumns,dropNA=False,shuffle=False)
-dataOutput = bestfit(allData,data,model = bestModel,parameter = bestParameter,YColumn=YColumn)
-#update the rank based on the predicted response ratings
-updatedEmailList = updaterank(centralEmailList,dataOutput,YColumn)
-
-#update all users in the central email list for new ranks
-print "update the rank in 'centralEmailList' to cassandra, please wait about 1 minute"
-n = updatedEmailList.shape[0]
-for i in range(n):
-    #rank is based on sorted predicted rating. which is 'responseRating'
-    rank = i + 1
-    email = updatedEmailList.iloc[i]['email']
-    prepared_stmt = session.prepare ("""
-    UPDATE "centralEmailList" SET rank = ? WHERE email = ?
+#load the sent email list
+def loadsentemails():
+    print "retrieving the most recent sent email list as training data from cassandra"
+    rawEmailList = session.execute("""
+    select * from "sentEmailList"
     """)
-    bound_stmt = prepared_stmt.bind([rank,email])
-    stmt = session.execute(bound_stmt)
-print str(n) + " rows of data have been updated"
+
+    #convert paged results to a list then a dataframe
+    sentEmailList = pd.DataFrame(list(rawEmailList))
+    return(sentEmailList)
+
+#load the central email list
+def loadcentralemails():
+    #load the central email list (the most recent) from cassandra
+    print "retrieving all emails in the central email list as test data from cassandra"
+    rawEmailList = session.execute("""
+    select * from "centralEmailList"
+    """)
+
+    #convert paged results to a list then a dataframe
+    centralEmailList = pd.DataFrame(list(rawEmailList))
+    #calculate the rank for each email (user)
+    print "preparing the test data from the central email list with " + str(centralEmailList.shape[0]) + " emails"
+    centralEmailList = getwaitingday(centralEmailList)
+    return(centralEmailList)
+
+#update email ranks
+def updateemailranks(updatedEmailList):
+    #update all users in the central email list for new ranks
+    print "update the rank in 'centralEmailList' to cassandra, please wait about 1 minute"
+    n = updatedEmailList.shape[0]
+    for i in range(n):
+        #rank is based on sorted predicted rating. which is 'responseRating'
+        rank = i + 1
+        email = updatedEmailList.iloc[i]['email']
+        prepared_stmt = session.prepare ("""
+        UPDATE "centralEmailList" SET rank = ? WHERE email = ?
+        """)
+        bound_stmt = prepared_stmt.bind([rank,email])
+        stmt = session.execute(bound_stmt)
+    print str(n) + " rows of data have been updated"
+
+#main function
+if __name__ == '__main__':
+    #connect to cassandra
+    print "connecting to cassandra for local mode"
+    cluster = Cluster()
+    session = cluster.connect('marketingApp')
+    session.row_factory = dict_factory
+
+    #define the email rating paramters
+    ratingParameters = {"no":0,"open":1,"click":2,"sold":3}
+    minValidResponse = 10
+    #load the sent email list (the most recent) from cassandra
+    sentEmailList = loadsentemails()
+    #pre-check and summarize all responses
+    checkresponse(sentEmailList,minValidResponse)
+    #calculate the rank for each email (user)
+    print "preparing the training data"
+    sentEmailList = getresponserating(sentEmailList,ratingParameters)
+    sentEmailList = getwaitingday(sentEmailList)
+    #load the central email list
+    centralEmailList = loadcentralemails()
+    #get shuffled training data, selected a few columns which will be considered
+    print "getting training data"
+    #we will add more columns later
+    #XColumns = ["gender","waitingDay","orderCount","preferences","quantityCount","age","shippingProvince","type"]
+    XColumns = ["waitingDay","totalSales","orderCount","quantityCount","type","beersType"]
+    YColumn = ["responseRating"]
+    dummyColumns = ["type","beersType"]
+    data = gettraining(sentEmailList,XColumns,dummyColumns,YColumn,dropNA = True,shuffle = True)
+    #find the best random forest model by cross validation
+    print "getting the best random forest model"
+    [RFParameters,RFError] = RFCV(data,YColumn,k = 5,nTreeInitial = 50,maxDepth = 10,maxNumTrees = 200)
+    #find the best lasso model by cross validation
+    print "getting the best lasso model"
+    [lassoParameter,lassoError] = lassoCV(data,YColumn,k = 5,maxAlpha = 10)
+    #find the best rigde model by cross validation
+    print "getting the best ridge model"
+    [ridgeParameter,ridgeError] = ridgeCV(data,YColumn,k = 5,maxAlpha = 10)
+    #fit the simple linear model by cross validation
+    print "fitting the simple linear model"
+    [linearParameter,linearError] = linearCV(data,YColumn,k = 5)
+    #print the error for each model and get the best model with smallest CV error
+    modelTypes = ["RF","lasso","ridge","linear"]
+    modelParameters = [RFParameters,lassoParameter,ridgeParameter,linearParameter]
+    modelErrors = [RFError,lassoError,ridgeError,linearError]
+    bestModel = modelTypes[modelErrors.index(min(modelErrors))]
+    bestParameter = modelParameters[modelErrors.index(min(modelErrors))]
+    print "the smallest error for each model:"
+    print "random forest:"+str(RFError)+", lasso:"+str(lassoError)+", ridge:"+str(ridgeError)+", linear:"+str(linearError)
+    #fit the best model to all emails in the central email list
+    print "working on final fit using the best selected model, which is " + bestModel
+    #for unseen training data, we don't need to have the y variable
+    allData = gettraining(centralEmailList,XColumns,dummyColumns,dropNA=False,shuffle=False)
+    dataOutput = bestfit(allData,data,model = bestModel,parameter = bestParameter,YColumn=YColumn)
+    #update the rank based on the predicted response ratings
+    updatedEmailList = updaterank(centralEmailList,dataOutput,YColumn)
+    #update the email ranks
+    updateemailranks(updatedEmailList)

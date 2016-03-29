@@ -18,39 +18,49 @@ def checkinputs(emails,status,centralEmailList):
     if status not in ["preferred","pending","rejected","sent"]:
         raise ValueError("the input status " + status + " is not valid")
 
-#input all emails whose statuses will be changed
-emails = ["lionrunner73@yahoo.com","matthew.gates@ge.com"]
-
-#input the status option which we would like those emails to go to
-status = "preferred"
-
-#connect to cassandra
-print "connecting to cassandra for local mode"
-cluster = Cluster()
-session = cluster.connect('craftshack')
-session.row_factory = dict_factory
-
-#load the sent email list (the most recent) from cassandra
-print "retrieving all emails in the central email list as test data from cassandra"
-rawEmailList = session.execute("""
-select * from "centralEmailList"
-""")
-
-#convert paged results to a list then a dataframe
-centralEmailList = pd.DataFrame(list(rawEmailList))
-
-#check all inputs
-checkinputs(emails,status,centralEmailList)
-
-#update selected users in the central email list for new statuses
-print "update the status in 'centralEmailList' to cassandra, please wait about 1 minute"
-n = len(emails)
-for i in range(n):
-    newStatus = status
-    email = emails[i]
-    prepared_stmt = session.prepare ("""
-    UPDATE "centralEmailList" SET status = ? WHERE email = ?
+#load the central email list
+def loadcentralemails():
+    print "retrieving all emails in the central email list as test data from cassandra"
+    rawEmailList = session.execute("""
+    select * from "centralEmailList"
     """)
-    bound_stmt = prepared_stmt.bind([newStatus,email])
-    stmt = session.execute(bound_stmt)
-print str(n) + " rows of data have been updated"
+
+    #convert paged results to a list then a dataframe
+    centralEmailList = pd.DataFrame(list(rawEmailList))
+    return(centralEmailList)
+
+#update email status
+def updateemailstatus(emails,status,centralEmailList):
+    #update selected users in the central email list for new statuses
+    print "update the status in 'centralEmailList' to cassandra, please wait about 1 minute"
+    n = len(emails)
+    for i in range(n):
+        newStatus = status
+        email = emails[i]
+        prepared_stmt = session.prepare ("""
+        UPDATE "centralEmailList" SET status = ? WHERE email = ?
+        """)
+        bound_stmt = prepared_stmt.bind([newStatus,email])
+        stmt = session.execute(bound_stmt)
+    print str(n) + " rows of data have been updated"
+
+#main function
+if __name__ == '__main__':
+    #connect to cassandra
+    print "connecting to cassandra for local mode"
+    cluster = Cluster()
+    session = cluster.connect('marketingApp')
+    session.row_factory = dict_factory
+
+    #below is only for debuging
+    #input all emails whose statuses will be changed
+    emails = ["lionrunner73@yahoo.com","matthew.gates@ge.com"]
+    #input the status option which we would like those emails to go to
+    status = "preferred"
+
+    #load the central email list (the most recent) from cassandra
+    centralEmailList = loadcentralemails()
+    #check all inputs
+    checkinputs(emails,status,centralEmailList)
+    #update email status
+    updateemailstatus(emails,status,centralEmailList)

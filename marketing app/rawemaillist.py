@@ -25,50 +25,59 @@ def cleanemaillist(initialEmailList):
     emailList.loc[emailList.shippingCity == '#N/A',"shippingCity"] = None
     return(emailList)
 
-#connect to cassandra
-print "connecting to cassandra for local mode"
-cluster = Cluster()
-session = cluster.connect('marketingApp')
-session.row_factory = dict_factory
-
 #load the initial email list locally
-print "loading and cleaning the initial email list"
-data = []
-with open('initial_email_list.csv', 'rb') as csvfile:
-    reader = csv.reader(csvfile)
-    for row in reader:
-        data.append(row)
+def loademails():
+    print "loading and cleaning the initial email list"
+    data = []
+    with open('initial_email_list.csv', 'rb') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            data.append(row)
 
-#load into a dataframe
-initialEmailList = pd.DataFrame(data[1:])
-#assign column names
-initialEmailList.columns = data[0]
-#clean data
-initialEmailList = cleanemaillist(initialEmailList)
+    #load into a dataframe
+    initialEmailList = pd.DataFrame(data[1:])
+    #assign column names
+    initialEmailList.columns = data[0]
+    #clean data
+    initialEmailList = cleanemaillist(initialEmailList)
+    return(initialEmailList)
 
 #create the table for raw unique emails, which won't be touched again
-session.execute("""
-CREATE TABLE IF NOT EXISTS "rawEmailList" (
-    "userId" int,
-    email varchar,
-    name varchar,
-    "shippingCountry" varchar,
-    "shippingProvince" varchar,
-    "shippingCity" varchar,
-    type varchar,
-    PRIMARY KEY (email)
-)
-""")
-
-#insert raw data to cassandra table "rawEmailList"
-print "inserting raw initial emails to cassandra, please wait about 2 minutes"
-n = initialEmailList.shape[0]
-for i in range(n):
-    values = initialEmailList.iloc[i].values.tolist()
-    prepared_stmt = session.prepare("""
-    INSERT INTO "rawEmailList" ("userId",email,name,"shippingCountry","shippingProvince","shippingCity",type)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+def insertdb(initialEmailList):
+    session.execute("""
+    CREATE TABLE IF NOT EXISTS "rawEmailList" (
+        "userId" int,
+        email varchar,
+        name varchar,
+        "shippingCountry" varchar,
+        "shippingProvince" varchar,
+        "shippingCity" varchar,
+        type varchar,
+        PRIMARY KEY (email)
+    )
     """)
-    bound_stmt = prepared_stmt.bind(values)
-    stmt = session.execute(bound_stmt)
-print str(n) + " rows of initial emails have been inserted"
+
+    #insert raw data to cassandra table "rawEmailList"
+    print "inserting raw initial emails to cassandra, please wait about 2 minutes"
+    n = initialEmailList.shape[0]
+    for i in range(n):
+        values = initialEmailList.iloc[i].values.tolist()
+        prepared_stmt = session.prepare("""
+        INSERT INTO "rawEmailList" ("userId",email,name,"shippingCountry","shippingProvince","shippingCity",type)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """)
+        bound_stmt = prepared_stmt.bind(values)
+        stmt = session.execute(bound_stmt)
+    print str(n) + " rows of initial emails have been inserted"
+
+#main function
+if __name__ == '__main__':
+    #connect to cassandra
+    print "connecting to cassandra for local mode"
+    cluster = Cluster()
+    session = cluster.connect('marketingApp')
+    session.row_factory = dict_factory
+    #load emails
+    initialEmailList = loademails()
+    #insert to mongodb
+    insertdb(initialEmailList)
