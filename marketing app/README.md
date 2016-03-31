@@ -8,11 +8,11 @@ This is an email marketing process of email campaigns. This program will control
 
 All files can be found at: https://drive.google.com/open?id=0B5wkYHJz9Ns8azJBQjZQWHNoMDA
 
-Github repository: https://github.com/wsy1607/Marketing-App
+Github repository: https://github.com/wsy1607/Machine-Learning-at-BountyMe
 
 
 ## Overview of process
-First set up all raw data. Then generate emails for every single marketing campaign using multiple versions for testing. Update version ratios for next campaign using the multi-armed bandit test, and update ranks of all customers based on the predicted likelihood of getting positively feedback by machine learning algorithms.
+First set up all raw data. Then generate emails for every single marketing campaign using multiple versions for testing. Update version ratios for next campaign using multi-variant tests, and update ranks of all customers based on the predicted likelihood of getting positively feedback by machine learning algorithms.
 
 
 ## Tools and Database Models
@@ -21,19 +21,19 @@ Use the python scripts to read and write data into Cassandra (MongoDB is only re
 
 ### Step 1: Setting up all Raw Data and the central email list
 
-* Cassandra Setup: go to the Cassandra main repository, enter "bin/apache-cassandra -f" to run the Cassandra database
+* Cassandra Setup: go to the Cassandra main repository, enter "bin/apache-cassandra -f" to run the Cassandra database.
 
-* cassandrasetup.py: creates the main keyspace "marketingApp"
+* cassandrasetup.py: creates the main keyspace "marketingApp".
 
 * rawsalesdata.py creates the table "rawSalesData" which shows some historical transactions by those email recipients.
 
 * rawemaillist.py creates the table "rawEmailList" which is a list of all unique customers with their emails and other personal data.
 
-* rawversioninfo.py creates the table "rawVersionInfo" and "versionTests". "rawVersionInfo" keeps all raw version information, and "versionTests" keeps multiple split-tests results.
+* rawversioninfo.py (not finished) creates the table "rawVersionInfo" and "versionTests". "rawVersionInfo" keeps all raw version information, and "versionTests" keeps multiple split-tests results. We are simulating the version data for now.
 
 * MongoDB Setup: go to the Bluemoon repository, run the Meteor app.
 
-* mongodbsetup.py creates the table "beersData", which is a list beers with sales, similar beers and ranks, which will be displayed as recommendations later.
+* mongodbsetup.py creates the table "beersData", which is a list beers with sales, similar beers and ranks, which will be displayed as recommendations.
 
 * centralemaillist.py creates the table "centralEmailList" using the table "rawSalesData" and "beersData". It is the full list of all customers with emails and other personal data. Each email in the "centralEmailList" has a status and a rank. We will select emails from the "centralEmailList" based on the status and the rank for every single campaign. The status and rank will be updated after completing each email campaign.
 
@@ -44,7 +44,7 @@ Use the python scripts to read and write data into Cassandra (MongoDB is only re
 
 * The administrator can manually check for all those propose emails. When generating the propose email candidates, the default 'check' status is "yes". If the administrator doesn't want to consider this email forever, turn it to "no". If the administrator doesn't want to consider this email for the next campaign, turn it to "pending".
 
-* createfinalemails.py creates the table "finalEmailList" using the table "proposeEmailList" with 'yes' check status, and all emails on the "finalEmailList" will be send out for the next campaign. In the main time, we assign each email a version randomly based on the most recent multi-armed-split-test ratio calculated from the table "versionTests".
+* createfinalemails.py creates the table "finalEmailList" using the table "proposeEmailList" with 'yes' check status, and all emails on the "finalEmailList" will be send out for the next campaign. In the main time, we assign each email a version randomly based on the most recent multi-armed-split-test ratios calculated from the table "versionTests".
 
 * The administrator is able to send all emails in the table "finalEmailList".
 
@@ -60,13 +60,12 @@ After collecting some feedbacks from those sent emails, such as 'open', 'reply' 
 
 * updateemailstatus.py (optional) updates all email status in the table "centralEmailList" by the email campaign administrator from the front-end. Inputs are a list of emails and a status so that every email would be manually controlled.
 
-### Step 4: Repeat the step 2 and step 3 until we complete the process
+### Step 4: Repeat the step 2 and step 3 until we complete the entire process
 
-* tracking.py (optional) reports all KPIs of our marketing applications to track the whole process including general emails information and sent emails information.
 
 ## Database Reference
 
-* Keyspace: craftshack
+* Keyspace: 'marketingApp'
 
 * All Tables: "rawSalesData","rawEmailList","versionInfo","beersData","centralEmailList","proposeEmailList"(temp),"finalEmailList"(temp),"sentEmailList","versionTests"
 
@@ -96,6 +95,7 @@ After collecting some feedbacks from those sent emails, such as 'open', 'reply' 
 * "sentEmailList": indices on "response", "age", "gender", "type"
 
 * "versionTests": no indices
+
 
 ### Important Column References
 

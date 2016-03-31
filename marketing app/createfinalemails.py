@@ -7,8 +7,6 @@
 #emails into the final email list, we assign the available versions randomly
 #with probability p, where p = the correponding version test ratio
 
-#important:
-#1: all filters should be applied when retrieving data from cassandra
 
 #load packages
 from cassandra.cluster import Cluster
@@ -50,8 +48,6 @@ def getversionratio(versionData):
 def getversionid(finalEmailList,versionRatio):
     testVersionIds = list(versionRatio["versionId"])
     ratios = list(versionRatio["testRatio"])
-    #print ratios
-    #print 1 - sum(ratios)
     #check
     if len(testVersionIds) != len(ratios):
         raise ValueError("cannot create final emails, because versionIds are not unique")
@@ -69,7 +65,7 @@ def getversionid(finalEmailList,versionRatio):
 
 #load emails
 def loadproposeemails():
-    #load the central email list from cassandra
+    #load the propose email list from cassandra
     print "retrieving the propose email list from cassandra"
     rawEmailList = session.execute("""
     select * from "proposeEmailList"
@@ -158,7 +154,7 @@ def insertfinalemails(approvedEmailList):
 
 #update the central email list
 def updateemails(approvedEmailList,rejectedEmailList):
-    #update the central email list
+    #update the emails approved to be sent
     print "updating the central email list in cassandra, please wait about 1 minute"
     for i in range(n):
         status = "sending"
@@ -169,7 +165,7 @@ def updateemails(approvedEmailList,rejectedEmailList):
         bound_stmt = prepared_stmt.bind([status,email])
         stmt = session.execute(bound_stmt)
     print str(i+1) + " approved emails have been successfully updated to the central email list"
-
+    #update the emails rejected to be sent
     for i in range(rejectedEmailList.shape[0]):
         status = "rejected"
         email = rejectedEmailList.iloc[i]['email']
@@ -198,8 +194,6 @@ def updatefinalemails(versionRatio):
     for i in range(n):
         email = finalEmailList['email'][i]
         versionId = finalEmailList['versionId'][i]
-        #print userId
-        #print email
         prepared_stmt = session.prepare ("""
         UPDATE "finalEmailList" SET "versionId" = ? WHERE (email = ?)
         """)
@@ -225,7 +219,7 @@ if __name__ == '__main__':
     print str(approvedEmailList.shape[0]) + " approved emails have been loaded"
     rejectedEmailList = filterbycheck(proposeEmailList, check = "no")
     print str(rejectedEmailList.shape[0]) + " rejected emails have been loaded"
-    #check all inputs are right
+    #check all inputs
     checkinputs(n,approvedEmailList,rejectedEmailList)
     #create final emails
     insertfinalemails(approvedEmailList)

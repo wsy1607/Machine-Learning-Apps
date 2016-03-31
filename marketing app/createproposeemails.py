@@ -30,7 +30,6 @@ def sortbyrank(proposeEmailList):
     emailList = emailList.loc[emailList.status != 'rejected']
     emailList = emailList.loc[emailList.status != 'sent']
     #sort by rank
-    #emailList = emailList.sort('rank',ascending = True)
     emailList = emailList.sort_index(by=['status','rank'],ascending=[False,True])
     return(emailList)
 
@@ -66,7 +65,7 @@ def loademails():
     proposeEmailList = pd.DataFrame(list(rawEmailList))
     return(proposeEmailList)
 
-#insert to cassandra
+#insert into cassandra
 def insertdb(proposeEmailList,n):
     #create the table for the propose email list
     session.execute("""
@@ -109,7 +108,7 @@ def insertdb(proposeEmailList,n):
         stmt = session.execute(bound_stmt)
     print str(i+1) + " emails have been successfully inserted"
 
-    #create indices for status, rank and type
+    #create indices for status, check and type
     session.execute("""
     create index if not exists "proposeEmailList_status" on "proposeEmailList"(status)
     """)
@@ -139,5 +138,5 @@ if __name__ == '__main__':
     #get current date and time
     createTime = gettesttime()
     createDate = gettestdate(createTime)
-    #insert to cassandra
+    #insert into cassandra
     insertdb(proposeEmailList,n)

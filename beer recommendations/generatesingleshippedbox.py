@@ -31,7 +31,7 @@ def getinventory():
     inventoryInfo = []
     for beer in db1.beers.find():
         beerInfoDict = {}
-        #get one inventory
+        #get inventory
         inventory = beer.get("inventory")[0]
         beerInfoDict["status"] = beer.get("status")
         beerInfoDict["vendor"] = beer.get("vendor",{}).get("name","")
@@ -78,7 +78,6 @@ def getshippedboxuser(shippedBoxUserIdList):
             #get shipped box user info from beer club collection
             boxUser = db1.beerClub.find_one({"subscriber.userId":boxUserId})
             boxUserDict = {}
-            #userDict["proposeBoxId"] = user.get("_id")
             boxUserDict["userId"] = boxUserId
             boxUserDict["shippedBoxId"] = shippedBoxId
             boxUserDict["type"] = boxUser.get("box").get("type")
@@ -186,6 +185,7 @@ def cleanratedbox(ratedBoxInfoRaw):
                 ratedBoxDict["beerId"] = likedBeer
                 ratedBoxDict["like"] = 1
                 ratedBoxList.append(ratedBoxDict)
+        #get disliked beers
         if dislikedBeers != []:
             for dislikedBeer in dislikedBeers:
                 ratedBoxDict = {}
@@ -193,6 +193,7 @@ def cleanratedbox(ratedBoxInfoRaw):
                 ratedBoxDict["beerId"] = dislikedBeer
                 ratedBoxDict["like"] = -1
                 ratedBoxList.append(ratedBoxDict)
+        #get the rest beers
         if restBeers != []:
             for restBeer in restBeers:
                 ratedBoxDict = {}
@@ -593,7 +594,7 @@ def gettestdata(testData,user,columns,categories,trainingColumns,top):
 def getrecommendation(userInfo,predictions,beersData,minRemaining=20,total=6,profitRange=[-20,100],top=100):
     #make a copy of beers data
     beers = beersData.copy()
-    #pre-filter beers by remaining, status and rating
+    #pre-filter beers by remaining, status and rating (not finished)
     #beers = beers.loc[beers["remaining"] >= minRemaining]
     #beers = beers.loc[beers["status"] == "available"]
     #get recommendation per user
@@ -736,7 +737,7 @@ if __name__ == '__main__':
 
     #define a shipped box id (for debug only)
     #shippedBoxId = "n97ryKBhSBCrHAaZr"
-    
+
     #get all inventory info
     print "loading sales info and beer box user info"
     inventoryInfo = getinventory()

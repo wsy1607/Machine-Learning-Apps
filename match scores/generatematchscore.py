@@ -1,20 +1,20 @@
-#This script calculates match scores between contacts and job posts
+#This script generates match scores between contacts and job posts
 #contacts are based on users' linkedin connections
 #input collections: "fortune500","topSchool","positions" and "profiles"
-#output collections: unknown
+#output collections: undefined
 #important: should execute this script after new job are available in the database
 #note that we don't have any insertion because the data structure needs to be re-defined
 
 #Step 1: get position info including all requirements
 #Step 2: get user's connections as candidates
 #Step 3: calculate the match score for every candidate
-#Step 4: insert everything back to mongodb in a new collection
+#Step 4: insert everything back to mongodb
 
 #to do: define the data structure and then complete those score sorting functions
-#from line 263 to line 306 and finish the insertion function
+#from line 263 to line 306 and finish the insertion
 
 
-#Load packages
+#load packages
 import re
 import time
 import csv
@@ -43,7 +43,7 @@ def checkinputs(positionId,userId,connectionDegree):
         userName = user.get("name")
         print "calculating match score for the position: " + positionTitle + " using " + userName + "'s " + connectionDegree + " degree connections"
 
-#define the function for querying connections for specific users
+#define the function for querying connections of users, usually the first degree
 def getcontacts(userId,connectionDegree = "first"):
     contacts = []
     firstConnectionIds = []
@@ -52,13 +52,13 @@ def getcontacts(userId,connectionDegree = "first"):
     for firstConnection in db1.profiles.find({"connectionIds":{"$elemMatch":{"$eq":userId}}}):
         firstConnectionIds += firstConnection.get("connectionIds",[])
         contacts.append(firstConnection)
-    #get all second degree connections
+    #get all second degree connections if necessary
     if connectionDegree != "first":
         for secondConnection in db1.profiles.find({"connectionIds":{"$elemMatch":{"$in":firstConnectionIds}}}):
             if secondConnection not in contacts:
                 secondConnectionIds += secondConnection.get("connectionIds",[])
                 contacts.append(secondConnection)
-    #get all third degree connections
+    #get all third degree connections if necessary
     elif connectionDegree != "second":
         for thirdConnection in db1.profiles.find({"connectionIds":{"$elemMatch":{"$in":secondConnectionIds}}}):
             if thirdConnection not in contacts:
@@ -77,7 +77,7 @@ def getcompanylist():
 
 #define the function for cleaning the company list for matching
 def cleancompanylist(companyList):
-    #each of the company name in each profile list should be trimmed improve the matching accuracy
+    #each of the company name in each profile list should be trimmed to improve the matching accuracy
     for i, company in enumerate(companyList):
         #clean "The" & ","
         companyCleaned1 = re.sub(',','',re.sub('^The ','',company))
@@ -107,15 +107,15 @@ def cleancompany(company):
     #convert to the lower case
     return(companyCleaned5.lower())
 
-#define the function for getting position parameters
+#define the function for getting position parameters defined in the job post
 def getpositions(position,colleges,companies):
     #get position id for this position
     positionId = position.get('_id','')
-    #get company name
+    #get company info
     name = position.get('jobOverview',{}).get('companyName','')
     #get position title
     title = position.get('jobOverview',{}).get('title','')
-    #get general requirements (headline) for this position
+    #get general requirements (for headline) for this position
     tagsDict = {}
     positionTags = position.get('jobOverview',{}).get('tags',[])
     if  positionTags == None:
@@ -167,9 +167,9 @@ def getpositions(position,colleges,companies):
     positionParameters["fields"] = fieldsDict
     return(positionParameters)
 
-#define the match_score function to get the score for each connection per user with a filter based on the score
+#define the match score function to get the score for each contact
 def getmatchscore(contact, position, jobLimit = 5, schoolLimit = 5):
-    #get scores for every single connection of this user
+    #get score for every single connection of this user
     positionTags = position.get('tags',{}).keys()
     positionSkills = position.get('skills',{}).keys()
     positionCompanies = position.get('companies',{}).keys()

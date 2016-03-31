@@ -48,14 +48,12 @@ def getversiontestresults(sentEmailList,versionInfo):
     versionTestResultsList = []
     #get unique version ids
     versionIds = set(sentEmailList["versionId"])
-    #print versionIds
+    #get version test results
     for versionId in versionIds:
         versionTestResultsDict = {}
         versionVisits = sentEmailList.loc[sentEmailList.versionId == versionId]
         versionClicks = versionVisits.loc[versionVisits.response != 'no']
         versionTestResultsDict["versionId"] = versionId
-        #print versionId
-        #print versionInfo
         versionTestResultsDict["timeFeature"] = list(versionInfo.loc[versionInfo.versionId == versionId,"timeFeature"])[0]
         versionTestResultsDict["titleFeature"] = list(versionInfo.loc[versionInfo.versionId == versionId,"titleFeature"])[0]
         versionTestResultsDict["visits"] = versionVisits.shape[0]
@@ -86,7 +84,7 @@ def getnextsplit(versionTestResults,percentile,stopRatio,n=10000):
             else:
                 MCRateList.append(random.beta(clicks,visits-clicks+1))
         MCDict[versionId] = MCRateList
-    #check if we have at least one click
+    #check if we have at least one click (response)
     if max(ratioList) == 0:
         raise ValueError("not enough valid responses from the sent email list")
     MCData = pd.DataFrame(MCDict)
@@ -103,22 +101,15 @@ def getnextsplit(versionTestResults,percentile,stopRatio,n=10000):
         maxVersionIndex.append(versionIds.index(maxVersionId))
     MCData["max"] = maxVersionIndex
     #get next split test info
-    #nextSplitList = []
     nextSplitDict = {}
     for versionId in versionIds:
-        #nextSplitDict = {}
         k = sum(MCData["max"] == MCData.columns.get_loc(versionId))
-        #print k
-        #nextSplitDict["versionId"] = versionId
-        #nextSplitDict["ratio"] = float(k)/float(n)
         nextSplitDict[versionId] = float(k)/float(n)
-        #nextSplitList.append(nextSplitDict)
     #calculate the remaining value of this test
     remainingValue = getremainingvalue(MCData,bestVersionIndex,percentile,n)
     #check whether to stop this test when the remaining value is too small
     bestVersionRate = ratioList[bestVersionIndex]
     remainingValue = getstopinfo(bestVersionRate,remainingValue,stopRatio)
-    #return({"nextSplitRatio":nextSplitList,"remainingValue":remainingValue})
     return({"nextSplitRatio":nextSplitDict,"remainingValue":remainingValue})
 
 #define the function to get the remaining value
@@ -221,7 +212,7 @@ if __name__ == '__main__':
     session = cluster.connect('marketingApp')
     session.row_factory = dict_factory
 
-    #set variables
+    #set the test variables
     #minimal number of response required for this process
     minValidResponse = 10
     #set up variables for stopping
@@ -234,7 +225,7 @@ if __name__ == '__main__':
     sentEmailList = loadsentemails()
     #load the version info
     versionInfo = loadversioninfo()
-    #check all inputs are right
+    #check all inputs
     checkinputs(versionInfo,sentEmailList,minValidResponse)
     #get version test results
     versionTestResults = getversiontestresults(sentEmailList,versionInfo)

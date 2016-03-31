@@ -34,5 +34,5 @@ if __name__ == '__main__':
     db1 = client1.meteor
     #load school data
     data = loadschool()
-    #insert to mongodb
+    #insert into mongodb
     insertdb(data)

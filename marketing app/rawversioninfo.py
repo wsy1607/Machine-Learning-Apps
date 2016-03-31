@@ -95,7 +95,7 @@ def createversiontest(versionInfo):
     )
     """)
 
-    #insert initial version test data to cassandra table "versionTests"
+    #insert initial version test data into cassandra table "versionTests"
     print "inserting the version test list into cassandra, please wait about 1 second"
     for i in range(versionInfo.shape[0]):
         values = versionInfo.iloc[i].values.tolist() + [testDate,testTime,None,None,None,testRatio]

@@ -35,9 +35,9 @@ def loadfinalemails():
     sentEmailList = pd.DataFrame(list(rawEmailList))
     return(sentEmailList)
 
-#insert to the final email list
+#insert into the sent email list
 def insertsentemails(sentEmailList):
-    #write final emails which have just been sent into the sent email list
+    #create or update the sent email list
     session.execute("""
     CREATE TABLE IF NOT EXISTS "sentEmailList" (
         age int,
@@ -68,7 +68,7 @@ def insertsentemails(sentEmailList):
     )
     """)
 
-    #insert raw data to cassandra table "sentEmailList"
+    #insert sent emails into cassandra table "sentEmailList"
     print "inserting all sent emails into cassandra, please wait about 1 minute"
     for i in range(sentEmailList.shape[0]):
         values = sentEmailList.iloc[i].values.tolist() + ["no"]
@@ -80,7 +80,7 @@ def insertsentemails(sentEmailList):
         stmt = session.execute(bound_stmt)
     print str(i+1) + " emails have been successfully inserted into the sent email list"
 
-    #create indices for age, gender, type and response
+    #create indices for response, age, gender and type
     session.execute("""
     create index if not exists "sentEmailList_response" on "sentEmailList"(response)
     """)
@@ -111,7 +111,7 @@ def updateemails(sentEmailList):
 
 #delete the propose email list and the final email list
 def deleteemails():
-    #clean table "proposeEmailList" and table "finalEmailList"
+    #drop the table "proposeEmailList" and the table "finalEmailList"
     session.execute("""
     drop table "proposeEmailList"
     """)
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     checkinputs(sentEmailList)
     #change status
     sentEmailList = changestatus(sentEmailList)
-    #insert to the sent email list
+    #insert into the sent email list
     insertsentemails(sentEmailList)
     #update emails in the central email list
     updateemails(sentEmailList)

@@ -124,7 +124,7 @@ def getinventory():
     inventoryInfo = []
     for beer in db1.beers.find():
         beerInfoDict = {}
-        #get one inventory
+        #get inventory
         inventory = beer.get("inventory")[0]
         beerInfoDict["status"] = beer.get("status")
         beerInfoDict["vendor"] = beer.get("vendor",{}).get("name","")
@@ -188,7 +188,6 @@ def getshippedboxuser(shippedBoxId):
     boxUserDict = {}
     boxUserDict["shippedBoxId"] = shippedBoxUser.get("_id")
     boxUserDict["userId"] = shippedBoxUser.get("userId")
-    #boxUserDict["type"] = shippedBoxUser.get("type")
     #get user strength preferences, such as light, medium and strong
     boxUserDict["strengthLight"] = shippedBoxUser.get("preferences",{}).get("strength",{}).get("light")
     boxUserDict["strengthMedium"] = shippedBoxUser.get("preferences",{}).get("strength",{}).get("medium")
@@ -512,7 +511,7 @@ def getinventoryid(beerIds,boxOptions):
     priceOption = boxOptions.get("price")
     for beerId in beerIds:
         if priceOption != 1:
-        #for some beers having multiple styles, choose the one based on the price
+        #for some beers having multiple styles (both can and bottle), choose the one based on the price
             inventoryId = list(db1.inventory.aggregate([ {"$match":{"beerId":beerId}}, {"$sort":{"price.currentPrice":1}},{"$limit":1},{"$project":{"_id":1}}]))
         else:
             inventoryId = list(db1.inventory.aggregate([ {"$match":{"beerId":beerId}}, {"$sort":{"price.currentPrice":-1}},{"$limit":1},{"$project":{"_id":1}}]))
@@ -528,7 +527,7 @@ def insertdb(shippedBoxUser,newBoxInfo):
     userType = shippedBoxUser.get("type")
     beers = newBoxInfo.get("newBoxBeerIds")
     inventoryIds = newBoxInfo.get("newBoxInventoryIds")
-    #insert new beer box to "beerBox" collection if it doesn't exit
+    #insert new beer box to "beerBox" collection if it doesn't exist
     #otherwise get the id and append the user to the existing beer box
     beerBox = db1.beerBox.find_one({"beers":{"$all":beers}})
     if beerBox != None:

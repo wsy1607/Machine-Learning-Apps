@@ -30,7 +30,7 @@ def cleanemaillist(initialEmailList):
     emailList = initialEmailList.copy()
     #change data type of userId from string to int
     emailList["userId"] = emailList["userId"].astype(int)
-    #change data type of missing values to NaN
+    #change data type of missing values to None
     emailList.loc[emailList.shippingCountry == '#N/A',"shippingCountry"] = None
     emailList.loc[emailList.shippingProvince == '#N/A',"shippingProvince"] = None
     emailList.loc[emailList.shippingCity == '#N/A',"shippingCity"] = None
@@ -156,14 +156,13 @@ def getbeers(proposeEmailList,salesData,beersData,k,p):
             beers = beers.sort_index(by=['totalSales'],ascending=[False])
             recommendedBeers = beers["beerId"].iloc[0:k].tolist()
             beersType = "regular"
-        #if there are fewer than k beers and more than 1, we randomly choose to add similar beers or top sold beers
+        #if there are fewer than k beers and more than 1, we randomly choose to add similar beers or best-selling beers
         else:
             if random.random() > p and beers.shape[0] > 1:
                 #add similar beers (6 similar beers at most)
                 similarBeerIds = []
                 for beerId in beers["beerId"].tolist()[0:2]:
                     similarBeers = beersData.loc[beersData.productTitle == beer,"similarBeers"]
-                    #similarBeers = db1.beers.find_one({"_id":beerId})
                     if similarBeers.empty == False:
                         similarBeerIds += similarBeers.values[0]
                 #check whether we get enough beers
@@ -171,7 +170,6 @@ def getbeers(proposeEmailList,salesData,beersData,k,p):
                 moreBeerIds = []
                 while len(set(beers["beerId"].tolist()+similarBeerIds+moreBeerIds)) < k:
                     #if not, add beers from the top sales list
-                    #moreBeer = db1.beers.find_one({"overview.name":topBeers[i]})
                     moreBeer = beersData.loc[beersData.productTitle == topBeers[i],"beerId"]
                     i += 1
                     if moreBeer.empty == False:
@@ -256,7 +254,7 @@ def insertdb(mainEmailList,recommendedBeers,beersType,updateTime,updateDate):
     )
     """)
 
-    #insert raw data to cassandra table "rawSalesData"
+    #insert raw data to cassandra table "mainEmailList"
     print "inserting emails to cassandra, please wait about 5 minutes"
     n = mainEmailList.shape[0]
     for i in range(n):
@@ -268,7 +266,7 @@ def insertdb(mainEmailList,recommendedBeers,beersType,updateTime,updateDate):
         bound_stmt = prepared_stmt.bind(values)
         stmt = session.execute(bound_stmt)
         print str(i+1) + " emails have been successfully inserted"
-    #create indices for status and rank
+    #create indices for status, type and rank
     session.execute("""
     create index if not exists "centralEmailList_status" on "centralEmailList"(status)
     """)
@@ -290,20 +288,6 @@ if __name__ == '__main__':
     cluster = Cluster()
     session = cluster.connect('marketingApp')
     session.row_factory = dict_factory
-
-    # #load the initial email list locally
-    # print "loading and cleaning the initial email list"
-    # data = []
-    # with open('initial_email_list.csv', 'rb') as csvfile:
-    #     reader = csv.reader(csvfile)
-    #     for row in reader:
-    #         data.append(row)
-    #
-    # #load into a dataframe
-    # initialEmailList = pd.DataFrame(data[1:])
-    # #assign column names
-    # initialEmailList.columns = data[0]
-
 
     #load raw emails from cassandra
     initialEmailList = loademails()
@@ -336,5 +320,5 @@ if __name__ == '__main__':
     recommendedBeers = getbeers(mainEmailList,sales,beersData,k=10,p=0.5)
     beersType = recommendedBeers.get("beersType")
     recommendedBeers = recommendedBeers.get("recommendedBeers")
-    #insert to cassandra
+    #insert into cassandra
     insertdb(mainEmailList,recommendedBeers,beersType,updateTime,updateDate)

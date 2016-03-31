@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 
-#load raw sales data locally
+#load raw sales data
 def loadrawsales():
     print "loading raw sales data"
     data = []
@@ -38,5 +38,5 @@ if __name__ == '__main__':
     db1 = client1.meteor
     #load sales data
     sales = loadrawsales()
-    #insert to mongodb
+    #insert into mongodb
     insertdb(sales)

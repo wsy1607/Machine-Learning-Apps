@@ -53,12 +53,12 @@ if __name__ == '__main__':
     session.row_factory = dict_factory
 
     #below is only for debuging
-    #input all emails whose statuses will be changed
+    #input all emails to change the status
     emails = ["lionrunner73@yahoo.com","matthew.gates@ge.com"]
     #input the status option which we would like those emails to go to
     status = "preferred"
 
-    #load the central email list (the most recent) from cassandra
+    #load the central email list from cassandra
     centralEmailList = loadcentralemails()
     #check all inputs
     checkinputs(emails,status,centralEmailList)

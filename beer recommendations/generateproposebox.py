@@ -25,7 +25,7 @@ def getinventory():
     inventoryInfo = []
     for beer in db1.beers.find():
         beerInfoDict = {}
-        #get one inventory
+        #get inventory
         inventory = beer.get("inventory")[0]
         beerInfoDict["status"] = beer.get("status")
         beerInfoDict["vendor"] = beer.get("vendor",{}).get("name","")
@@ -202,11 +202,11 @@ def getproposebeers(users,beersData,minRemaining=10,total=6,profitRange=[-20,100
         #set up the profit range
         minProfit = profitRange[0]
         maxProfit = profitRange[1]
-        #filter by strength and taste
+        #filter by strength and taste (not finished)
         #if ... then ...
         #get budget
         budget = user.get("initialValue") - user.get("shippingCost") - user.get("packagingCost")
-        #get candidates
+        #set initial values
         totalPrice = 0
         counter = 0
         unique = False
@@ -223,6 +223,7 @@ def getproposebeers(users,beersData,minRemaining=10,total=6,profitRange=[-20,100
                 unique = True
             totalPrice = sum(goodBeers["currentPrice"].tolist()+badBeers["currentPrice"].tolist())
             print "generating " + str(total) + " beers with total price " + str(totalPrice) + " for " + str(userType) + " propose box user '" + str(userId) + "' for attempt " + str(counter)
+            #stop the process if too many attempts are made
             if counter > 100:
                 raise ValueError("too many attempts, could not fulfill the price requirement, please try again")
         inventoryIds = getinventoryid(user,recommendedBeers)
@@ -239,7 +240,7 @@ def getproposebeers(users,beersData,minRemaining=10,total=6,profitRange=[-20,100
 def getinventoryid(user,recommendedBeers):
     inventoryIdList = []
     for beerId in recommendedBeers:
-        #for some beers having multiple styles, choose the cheapest one as the default
+        #for some beers having multiple styles (both can and bottle), choose the cheapest one as the default
         inventoryId = list(db1.inventory.aggregate([ {"$match":{"beerId":beerId}}, {"$sort":{"price.currentPrice":1}},{"$limit":1},{"$project":{"_id":1}}]))
         inventoryIdList.append(str(inventoryId[0].get("_id")))
     return(inventoryIdList)
@@ -254,7 +255,7 @@ def insertdb(proposeBeers):
         beers = proposeBeer.get("recommendedBeers")
         inventoryIds = proposeBeer.get("inventoryIds")
         userType = proposeBeer.get("type")
-        #insert new beer box to "beerBox" collection if it doesn't exit
+        #insert new beer box to "beerBox" collection if it doesn't exist
         #otherwise get the id and append the user to the existing beer box
         beerBox = db1.beerBox.find_one({"beers":{"$all":beers}})
         if beerBox != None:

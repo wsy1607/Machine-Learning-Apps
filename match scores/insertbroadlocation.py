@@ -28,6 +28,7 @@ def insertdb(data):
         #clean the empty strings attached
         if '' in row:
             #get the first place we have the empty string in that row
+            #and take it as the end position of the location list
             k = row.index('')
         else:
             k = len(row)
@@ -42,5 +43,5 @@ if __name__ == '__main__':
     db1 = client1.meteor
     #load location data
     data = loadlocation()
-    #insert to mongodb
+    #insert into mongodb
     insertdb(data)

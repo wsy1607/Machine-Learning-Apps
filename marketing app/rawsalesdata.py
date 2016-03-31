@@ -1,5 +1,5 @@
 #this script inserts sales data with date range from 2013-Jan to 2015-Aug
-#to cassandra database as "rawSalesData"
+#into cassandra database as "rawSalesData"
 #this script must be executed only once
 #note that the initial data source is in the format of CSV given external,
 #so all the column names and variable names (total_sales) are different from all
@@ -33,7 +33,7 @@ def loadsales():
     sales[["price","total_sales"]]=sales[["price","total_sales"]].astype(float)
     return(sales)
 
-#create the table for raw sales data containing all info, which won't be touched again
+#create the table for raw sales data containing all info
 def insertdb(sales):
     session.execute("""
     CREATE TABLE IF NOT EXISTS "rawSalesData" (
@@ -57,7 +57,7 @@ def insertdb(sales):
     )
     """)
 
-    #insert raw data to cassandra table "rawSalesData"
+    #insert raw data into cassandra table "rawSalesData"
     print "inserting raw sales data to cassandra, please wait about 5 minutes"
     n = sales.shape[0]
     for i in range(n):
@@ -80,5 +80,5 @@ if __name__ == '__main__':
     session.row_factory = dict_factory
     #load sales data
     sales = loadsales()
-    #insert to cassandra
+    #insert into cassandra
     insertdb(sales)

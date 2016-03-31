@@ -4,44 +4,44 @@ Program Name: Beer Recommendations
 
 Author: Sheng
 
-This program will generate similar beers and recommended beer boxes as a part of our e-commerce product.
+This program will generate similar beers and recommended beer boxes as a part of our e-commerce app.
 
 All files can be found at: https://drive.google.com/drive/u/0/folders/0B5wkYHJz9Ns8UGtiRGFSLXVtMm8
 
-Github repository: https://github.com/wsy1607/Marketing-App
+Github repository: https://github.com/wsy1607/Machine-Learning-at-BountyMe
 
 
 ## Overview of process
-First set up all raw data. Then generate similar beers and recommended beer boxes using sales and user profiles data. Update ratings by web traffic logs (haven't finished). Please note that there are some randomly simulated parameters which haven't been well-defined (can be found with python function random()) so far. Also, several tuning parameters, for example, labeled as n, m and k should be re-defined if necessary.
+First set up all raw data. Then generate similar beers and recommended beer boxes using sales and user profiles data. Update ratings by web traffic logs (haven't finished). Please note that there are some randomly simulated parameters which need to be re-defined if necessary (can be found with python function random()). Also, several tuning parameters, for example, labeled as n, m and k should be re-defined for analytic purposes later.
 
 
 ## Tools and Database Models
-Use the python scripts to read and write data into MongoDB, which stores all front-end and back-end data. The following 4 steps include all methods. All methods from step 2 to step 4 are found in the beerRecommendation project under tasks.py (under celery tasks). Methods in step 1 should be executed only once when setting up all the data infrastructure (they won't show up in the celery tasks folder).
+Use the python scripts to read and write data into MongoDB, which stores all front-end and back-end data. The following 4 steps include all methods. All methods from step 2 to step 4 are found in the beerRecommendation project under tasks.py (under celery tasks). Methods in step 1 should be executed only once when setting up all the data infrastructure (they are not included in the celery tasks folder).
 
 
 ### Step 1: Setting up all Raw Data in MongoDB
 
-* insertsales.py creates a collection of beers with sales
+* insertsales.py creates a collection of beers with sales history.
 
-* insertlocationreference.py creates a collection of location information
+* insertlocationreference.py creates a collection of location information.
 
 
 ### Step 2: generate similar beers using k-means clustering methods
 
-* similarbeers.py queries all existing beers and sales data from collections "beers" and "rawSalesData" and add similar beers to the "beers" collection.
+* similarbeers.py load all existing beers and sales data from collections "beers" and "rawSalesData" and add similar beers to the "beers" collection.
 
 
 ### Step 3: generate proposed beer boxes and shipped beer boxes for club members
 
 * generateproposebox.py generates proposed boxes consist of six beers for all club members using their profiles and sales data.
 
-* generatesingleproposebox.py generates one proposed box for one specific club member using their profiles and sales data.
+* generatesingleproposebox.py generates one proposed box for one specific club member.
 
 * editsingleproposebox.py edits one proposed box given certain requirements.
 
 * generateshippedbox.py generates shipped boxes consist of six beers for all club members using their profiles, sales data and ratings of proposed boxes.
 
-* generatesingleshippedbox.py generates one shipped box for one specific club member using their profiles, sales data and ratings of proposed boxes.
+* generatesingleshippedbox.py generates one shipped box for one specific club member.
 
 * editsingleshippedbox.py edits one shipped box given certain requirements.
 
@@ -50,11 +50,13 @@ Use the python scripts to read and write data into MongoDB, which stores all fro
 
 * ratings.py updates all beers ratings by front-end web traffic logs.
 
+
 ## Database Reference
 
-* Local: use 3001 for local port testing for all scripts
+* Local: use 3001 as local port for testing for all scripts
 
 * Collections created: "rawSalesData","locationReference"
+
 
 ### Important Column References
 

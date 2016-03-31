@@ -11,7 +11,7 @@ from pymongo import MongoClient
 from bson.objectid import ObjectId
 
 
-#define the function to get data from mongoDB
+#define the function to get beers data from mongoDB
 def getdata():
     beerIds = []
     beerNames = []
@@ -68,7 +68,7 @@ def createsbeersdata(beersData):
     )
     """)
 
-    #insert raw data to cassandra table "similarBeers"
+    #insert raw data to cassandra table "beersData"
     print "inserting raw sales data to cassandra, please wait about 1 minute"
     n = beersData.shape[0]
     for i in range(n):

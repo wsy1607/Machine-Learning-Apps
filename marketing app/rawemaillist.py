@@ -1,4 +1,4 @@
-#this script creates a raw email list containing all unique emails
+#this script creates a raw email list containing all unique emails in the sales list
 #this script must be executed only once
 
 #important:
@@ -42,7 +42,7 @@ def loademails():
     initialEmailList = cleanemaillist(initialEmailList)
     return(initialEmailList)
 
-#create the table for raw unique emails, which won't be touched again
+#create the table for raw unique emails
 def insertdb(initialEmailList):
     session.execute("""
     CREATE TABLE IF NOT EXISTS "rawEmailList" (
@@ -79,5 +79,5 @@ if __name__ == '__main__':
     session.row_factory = dict_factory
     #load emails
     initialEmailList = loademails()
-    #insert to mongodb
+    #insert into mongodb
     insertdb(initialEmailList)

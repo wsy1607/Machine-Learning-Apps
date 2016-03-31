@@ -1,6 +1,6 @@
 #This script gets some functional infomation for all new contacts
-#input collections: "fortune500","topSchool","broadLocation","functionalLocation" and "profiles"
-#output collections: "profiles"
+#input collections: "fortune500","topSchool","broadLocation","functionalLocation" and "profiles" (remote server)
+#output collections: "profiles" (local server)
 #important: should execute this script very frequently after new contacts are available in the database
 
 #function details are shown as below:
@@ -15,13 +15,14 @@
 #greater boston area, greater atlanta area, greater seattle area, greater denver area, greater chicago area
 #function 5: expertise level:
 #a general score calculated based on the given profile measured by the professional experience
+#education, working and networking experience would be considered
 #function 6: current job time:
 #a metric showing how many months this person has been working at the current position
 
 #to do: add more functions to clean company names, position titles, school names and degrees
 
 
-#Load packages
+#load packages
 import re
 import time
 import csv
@@ -35,7 +36,7 @@ from bson.objectid import ObjectId
 
 #define the function for cleaning the company list for matching
 def cleancompanylist(companyList):
-    #each of the company name in each profile list should be trimmed improve the matching accuracy
+    #each of the company name in each profile list should be trimmed to improve the matching accuracy
     for i, company in enumerate(companyList):
         #clean "The" & ","
         companyCleaned1 = re.sub(',','',re.sub('^The ','',company))
@@ -74,21 +75,6 @@ def getcompanylist():
     companyList = db1.fortune500.find_one().get("fortune500")
     return(companyList)
 
-#define the function to get a dictionary for raw data
-def getlocationcategory(data):
-    #create the empty dictionary as the output
-    location_dict = {}
-    for i in range(len(data)):
-        row = data[i]
-        #clean the empty strings attached
-        if '' in row:
-            #get the first place we have the empty string in that row
-            k = row.index('')
-        else:
-            k = len(row)
-        location_dict[row[0]] = row[1:k]
-    return(location_dict)
-
 #define the function to get the special locations (broad / functional) for each contacts
 def getspeaciallocation(data,speacialLocation,special):
     #get category list for special location
@@ -98,7 +84,7 @@ def getspeaciallocation(data,speacialLocation,special):
         #get and clean the location
         rawLocation = data[i].get("location","").lower().strip()
         location = rawLocation.replace(" area","").replace(",","").replace("st. ","st-")
-        #break out each location into parts, and then partition them
+        #break down each location into parts, and then partition them
         locationPartitions = getlocationpartition(location)
         #create output list
         speacialLocation_output = []
@@ -122,9 +108,9 @@ def getspeaciallocation(data,speacialLocation,special):
         data[i][special] = speacialLocation_output
     return(data)
 
-#define the function to break out each location into parts, and then repartition them
+#define the function to break down each location into parts, and then repartition them
 def getlocationpartition(location):
-    #break out the location
+    #break down the location
     locationUnits = location.split(" ")
     #now only consider first k parts, k <= 4
     n = min(len(locationUnits),4)
@@ -292,7 +278,7 @@ def getseniority(data):
         data[i]["seniority"] = seniority
     return(data)
 
-#define the function to clean linkedin company names and write to a list
+#define the function to clean linkedin company names and write to a new list
 def cleancompany(data):
     #get cleaned for each contact for both current jobs and past jobs
     for i, contact in enumerate(data):
@@ -357,7 +343,7 @@ def geteducationscore(data,collegeList):
         for education in contact.get("education",[]):
             school = education.get("school",'')
             degree = education.get("degree",'')
-            #check for None
+            #check for missing values
             if school == None:
                 school = ''
             else:
@@ -384,7 +370,7 @@ def geteducationscore(data,collegeList):
         data[i]["expertiseLevel"] = level
     return(data)
 
-#get the general score for seniority & working experience
+#get the general score for working experience
 def getjobscore(data):
     for i, contact in enumerate(data):
         #get current expertise level
@@ -404,7 +390,7 @@ def getjobscore(data):
         data[i]["expertiseLevel"] = level
     return(data)
 
-#get the general score for the number of connections
+#get the general score for networking (number of connections)
 def getconnectionscore(data):
     for i, contact in enumerate(data):
         #get current expertise level
@@ -467,7 +453,7 @@ def getcontacts(userId,companyList,degree = "first"):
     # print len(contacts)
     return(contacts)
 
-#insert data into MongoDB
+#insert profiles data into MongoDB
 def insertdb(contacts):
     print "inserting data into mongodb"
     for i,contact in enumerate(contacts):
@@ -522,11 +508,11 @@ def insertdb(contacts):
 
 #main function
 if __name__ == '__main__':
-    #connect to mongodb locally
+    #connect to mongodb locally as db1
     print "connecting to mongodb from the local server"
     client1 = MongoClient('localhost', 3001)
     db1 = client1.meteor
-    #connect to mongodb remotely
+    #connect to mongodb remotely as db2
     print "connecting to the remote server"
     client2 = MongoClient('192.168.18.49')
     client2.linkedinDB.authenticate('userApp', 'raja123', mechanism='MONGODB-CR')
@@ -534,7 +520,7 @@ if __name__ == '__main__':
     client2 = MongoClient(uri)
     db2 = client2.meteor
 
-    #import the list of locations, schools and companies
+    #load the list of locations, schools and companies
     print "loading location, college and companies lists from mongodb"
     broadLocation = getbroadlocation()
     functionalLocation = getfunctionallocation()
@@ -547,7 +533,7 @@ if __name__ == '__main__':
     oldContactIds = []
     for profile in db1.profiles.find():
         oldContactIds.append(profile.get("_id","none"))
-    #get all new contacts
+    #get all new contacts and exclude old contacts
     contacts = []
     for contact in client2.linkedinDB.Profiles.find():
         #make sure these contacts are new

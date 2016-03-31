@@ -30,7 +30,7 @@ def getinventory():
     inventoryInfo = []
     for beer in db1.beers.find():
         beerInfoDict = {}
-        #get one inventory
+        #get inventory
         inventory = beer.get("inventory")[0]
         beerInfoDict["status"] = beer.get("status")
         beerInfoDict["vendor"] = beer.get("vendor",{}).get("name","")
@@ -185,6 +185,7 @@ def cleanratedbox(ratedBoxInfoRaw):
                 ratedBoxDict["beerId"] = likedBeer
                 ratedBoxDict["like"] = 1
                 ratedBoxList.append(ratedBoxDict)
+        #get disliked beers
         if dislikedBeers != []:
             for dislikedBeer in dislikedBeers:
                 ratedBoxDict = {}
@@ -192,6 +193,7 @@ def cleanratedbox(ratedBoxInfoRaw):
                 ratedBoxDict["beerId"] = dislikedBeer
                 ratedBoxDict["like"] = -1
                 ratedBoxList.append(ratedBoxDict)
+        #get the rest beers
         if restBeers != []:
             for restBeer in restBeers:
                 ratedBoxDict = {}
@@ -590,7 +592,7 @@ def gettestdata(testData,user,columns,categories,trainingColumns,top):
 def getrecommendation(userInfo,predictions,beersData,minRemaining=20,total=6,profitRange=[-20,100],top=100):
     #make a copy of beers data
     beers = beersData.copy()
-    #pre-filter beers by remaining, status and rating
+    #pre-filter beers by remaining, status and rating (not finished)
     #beers = beers.loc[beers["remaining"] >= minRemaining]
     #beers = beers.loc[beers["status"] == "available"]
     #get recommendation per user
@@ -664,7 +666,7 @@ def getrecommendation(userInfo,predictions,beersData,minRemaining=20,total=6,pro
         recommendation.append(recommendedBeersDict)
     return(recommendation)
 
-#define the function to get the profit range
+#define the function to get the profit range (should be re-defined)
 def getprofitrange(user,profitRange):
     if user.get("shippedBoxNumber") == 1:
         profitRange = [-20,0]
@@ -681,7 +683,7 @@ def fulfillbox(beers,budget,minProfit,maxProfit,goodPrice,total):
     #get the price range
     maxPrice = (budget - minProfit - sum(goodPrice))/(total-n)
     minPrice = (budget - maxProfit - sum(goodPrice))/(total-n)
-    #get beers which can fulfill the request
+    #get all available beers which can fulfill the request
     badBeers = badBeers.loc[badBeers.currentPrice <= maxPrice]
     badBeers = badBeers.loc[badBeers.currentPrice >= minPrice]
     if badBeers.shape[0] < 1:
@@ -692,7 +694,7 @@ def fulfillbox(beers,budget,minProfit,maxProfit,goodPrice,total):
 def getinventoryid(user,recommendedBeers):
     inventoryIdList = []
     for beerId in recommendedBeers:
-        #for some beers having multiple styles, choose the cheapest one as the default
+        #for some beers having multiple styles (both can and bottle), choose the cheapest one as the default
         inventoryId = list(db1.inventory.aggregate([ {"$match":{"beerId":beerId}}, {"$sort":{"price.currentPrice":1}},{"$limit":1},{"$project":{"_id":1}}]))
         inventoryIdList.append(str(inventoryId[0].get("_id")))
     return(inventoryIdList)

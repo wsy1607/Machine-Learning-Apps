@@ -1,9 +1,9 @@
-#This script helps to find similar and recommended beers using sales data grouped by geographic
+#This script generates similar and recommended beers using sales data grouped by geographic
 #locations
 #only similar beers will be inserted into MongoDB, while recommended beers
 #won't be inserted into MongoDB for now
-#The input collections: "rawSalesData" and "beers"
-#The outputs are lists of similar beers added to "beers"
+#input collections: "rawSalesData" and "beers"
+#outputs collections: "beers"
 
 
 #Load packages
@@ -53,7 +53,7 @@ def getlocation(x,states):
         x.loc[x["shippingProvince"] == state,"location"] = x.loc[x["shippingProvince"] == state,"shippingAddress"]
     return(x)
 
-#define the function to get the best beers
+#define the function to get the best-selling beers
 def getbestbeer(x,k = 5):
     #change data types
     x[["totalSales","price","quantityCount"]] = x[["totalSales","price","quantityCount"]].astype(float)
@@ -66,7 +66,7 @@ def getbestbeer(x,k = 5):
     new = newx.sort('totalSales',ascending = False).index.values.tolist()[0:k]
     return(new)
 
-#define the dfunction for dimension reduction so that it can save time when runing k-means
+#define the dfunction for dimension reduction (PCA) so that it can save time when runing k-means
 def reducedimension(x, v = 0.99, k = 20):
     #get first k components or first n components having variance explained > v
     pca = PCA()
@@ -75,7 +75,7 @@ def reducedimension(x, v = 0.99, k = 20):
     ncomp = min(np.where(variance > v)[0][1],k)
     return(pca.transform(x)[:,0:ncomp])
 
-#define the function to fit k-means for different number iterations for tuning
+#define the function to fit k-means for different number of iterations for tuning
 def findk(x, n = 1000, minK = 2, maxK = 20):
     errors = []
     #fit k-means clusters for n times
@@ -98,7 +98,7 @@ def getlabels(x, y, n = 1000 , k = 8):
     x.loc[:,"group"] = labels
     return(x)
 
-#define the function to write beer labels back to the raw data
+#define the function to get beer group labels
 def attachlabels(x,y):
     #get dimension
     n = y.shape[0]
@@ -171,6 +171,8 @@ def getsimilarbeer(x, beerIds_dict, k = 20, l = 40):
             beer_similar = beer_similar1 + beer_similar2
         top_beer.append(beer_similar)
     #get predicted similar beers for new beers
+    #when new beers are available, they won't have a group label because they have no sales
+    #so the similar beers of "new beers" will be best-selling beers for now
     new = {}
     new["beerId"] = ''
     new["productTitle"] = "new beer"
@@ -197,7 +199,7 @@ def getsimilarbeer(x, beerIds_dict, k = 20, l = 40):
         beer_output.append(beer_item)
     return(beer_output)
 
-#define the function for getting recommended beer
+#define the function for getting recommended beer for different groups of customers
 def getrecommendedbeer(x, y, k=20, address = "shippingProvince"):
     #get number of customer groups
     n = max(x.customerGroup) + 1
@@ -285,7 +287,7 @@ def getbeerid(x, beerIds_dict, group):
         item[group] = beers
     return(x)
 
-#insert to mongodb (similar beers only)
+#insert into mongodb (similar beers only)
 def insertdb(beerOutput):
     print "inserting similar beers into MongoDB"
     for i,item in enumerate(beerOutput):
@@ -303,7 +305,7 @@ if __name__ == '__main__':
     # client1 = MongoClient('localhost', 27017)
     # db1 = client1.appDB
 
-    #get all existing beer ids
+    #get all existing beer ids from beers collection
     beerIds_dict = {}
     for beer in db1.beers.find():
         beerName = beer.get('overview',{}).get('name','')
@@ -311,11 +313,10 @@ if __name__ == '__main__':
     #get sales data
     print "loading sales data from mongodb"
     beer = importsalesdata()
-    #get some more beers for recommended, as user defined
+    #get some more beers for recommended, as user defined (it is empty so far)
     moreBeers = getmorebeer()
 
     #find similar beers & similar customers based on geographic location
-
     #the first version is using "state" as address for non-CA customers; use "city" for CA customers
     #see the other versions as the commented code in the bottom
     print "cleaning the raw data"
