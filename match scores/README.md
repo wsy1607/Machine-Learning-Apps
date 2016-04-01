@@ -6,7 +6,7 @@ Author: Sheng
 
 This program will generate linkedin functions for all contacts loaded and match scores for all job posts. These contacts are based on users' connections. It provides a solution for job application referral systems.
 
-All files can be found at: https://drive.google.com/drive/u/0/folders/0B5wkYHJz9Ns8UGtiRGFSLXVtMm8
+All files can be found at: https://drive.google.com/drive/folders/0B5wkYHJz9Ns8QXk5blVwVU05RHM
 
 Github repository: https://github.com/wsy1607/Machine-Learning-at-BountyMe
 

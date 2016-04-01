@@ -6,7 +6,7 @@ Author: Sheng
 
 This is an email marketing process of email campaigns. This program will control the process from back-end data flow using python and could be interacted with the front-end interface as well.
 
-All files can be found at: https://drive.google.com/open?id=0B5wkYHJz9Ns8azJBQjZQWHNoMDA
+All files can be found at: https://drive.google.com/drive/folders/0B5wkYHJz9Ns8QXk5blVwVU05RHM
 
 Github repository: https://github.com/wsy1607/Machine-Learning-at-BountyMe
 

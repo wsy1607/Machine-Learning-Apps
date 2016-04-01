@@ -6,7 +6,7 @@ Author: Sheng
 
 This program will generate similar beers and recommended beer boxes as a part of our e-commerce app.
 
-All files can be found at: https://drive.google.com/drive/u/0/folders/0B5wkYHJz9Ns8UGtiRGFSLXVtMm8
+All files can be found at: https://drive.google.com/drive/folders/0B5wkYHJz9Ns8QXk5blVwVU05RHM
 
 Github repository: https://github.com/wsy1607/Machine-Learning-at-BountyMe
 
