@@ -29,6 +29,8 @@ Use the python scripts to read and write data into MongoDB, which stores all fro
 
 * insertfunctionallocation.py creates a collection of functional locations.
 
+* insertskills.py creates a collection of skills and their pairwise coefficients.
+
 
 ### Step 2: generate linkedin functions for all new contacts
 
@@ -46,7 +48,7 @@ Use the python scripts to read and write data into MongoDB, which stores all fro
 
 * Remote: use MongoClient at '192.168.18.49'.
 
-* Collections created: "fortune500","topSchool","broadLocation","functionalLocation"
+* Collections created: "fortune500","topSchool","broadLocation","functionalLocation","skills"
 
 
 ### Important Column References
