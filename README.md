@@ -1,6 +1,6 @@
 # Machine-Learning-at-BountyMe
 
-Author: Sheng
+Author: Shengying
 
 This project has three different programs. They are listed as below:
 
