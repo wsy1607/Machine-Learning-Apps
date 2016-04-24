@@ -58,6 +58,7 @@ Use the python scripts to read and write data into MongoDB, which stores all fro
 * "locationName" string: region category
 * "locationList" list: a list of states/countries in that region category
 * "currentJobTime" int: total months count in the current position
+* "promotionIndicator" int: 1: high probability to get promotion or quit; 0: low probability to get promotion or quit
 * "yearsOfExperience" string: less than 1 year, 1 to 2 years, 3 to 5 years, 6 to 10 years, more than 10 years
 * "companies" list: a list of companies from current to past
 * "latestDegree" string: the last degree earned

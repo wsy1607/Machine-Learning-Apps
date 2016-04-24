@@ -230,6 +230,16 @@ def getexperience(data):
         data[i]["currentJobTime"] = str(currentJobTime) + " months"
     return(data)
 
+#define the function to get the promotion indicator
+def getpromotionindicator(data, month = 12):
+    for i in range(len(data)):
+        if data[i].get("currentJobTime",0) > month:
+            promotionIndicator = 1
+        else:
+            promotionIndicator = 0
+        data[i]["promotionIndicator"] = promotionIndicator
+    return(data)
+    
 #define the function to get the seniority level for each contact
 def getseniority(data):
     for i in range(len(data)):
