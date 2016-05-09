@@ -239,7 +239,7 @@ def getpromotionindicator(data, month = 12):
             promotionIndicator = 0
         data[i]["promotionIndicator"] = promotionIndicator
     return(data)
-    
+
 #define the function to get the seniority level for each contact
 def getseniority(data):
     for i in range(len(data)):
@@ -557,6 +557,8 @@ if __name__ == '__main__':
     contacts = getspeaciallocation(data=contacts,speacialLocation=functionalLocation,special="functionalLocation")
     #get years of experience for users
     contacts = getexperience(contacts)
+    #get promotion indicator for users
+    contacts = getpromotionindicator(contacts)
     #get seniority for users
     contacts = getseniority(contacts)
     #get the latest degree
